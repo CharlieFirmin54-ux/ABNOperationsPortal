@@ -1,7 +1,14 @@
 import { randomBytes } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { cookies } from "next/headers";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import {
+  PEOPLE_COOKIE,
+  sessionCookieOptions,
+  signPayload,
+  unsignPayload,
+} from "@/lib/auth/session";
 import type {
   ListedOperator,
   OperatorRole,
@@ -74,14 +81,23 @@ function envKey(): string {
   ].join("\0");
 }
 
+function unwrapEnvJson(raw: string): string {
+  let value = raw.trim();
+  if (
+    (value.startsWith("'") && value.endsWith("'")) ||
+    (value.startsWith('"') && value.endsWith('"'))
+  ) {
+    value = value.slice(1, -1).trim();
+  }
+  return value;
+}
+
 function parseEnvOperatorsJson(): EnvPlainOperator[] {
-  const raw = process.env.AUTH_OPERATORS?.trim();
+  const raw = unwrapEnvJson(process.env.AUTH_OPERATORS ?? "");
   if (!raw) return [];
   const parsed: unknown = JSON.parse(raw);
-  if (!Array.isArray(parsed)) {
-    throw new Error("AUTH_OPERATORS must be a JSON array.");
-  }
-  return parsed.map((item, index) => {
+  const list = Array.isArray(parsed) ? parsed : [parsed];
+  return list.map((item, index) => {
     if (!item || typeof item !== "object") {
       throw new Error(`AUTH_OPERATORS[${index}] is not an object.`);
     }
@@ -108,6 +124,14 @@ function seedFromEnv(): EnvPlainOperator | null {
   );
   const role = process.env.AUTH_SEED_ROLE?.trim() || OPERATOR.role;
   return { name, email, role, password };
+}
+
+export function suggestedLoginEmail(): string {
+  return normalizeEmail(
+    process.env.AUTH_SEED_EMAIL?.trim() ||
+      process.env.YAHOO_EMAIL?.trim() ||
+      OPERATOR.email
+  );
 }
 
 async function hashEnvList(rows: EnvPlainOperator[]): Promise<StoredOperator[]> {
@@ -139,10 +163,8 @@ async function envOperators(): Promise<StoredOperator[]> {
   const rows: EnvPlainOperator[] = [];
   try {
     rows.push(...parseEnvOperatorsJson());
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "AUTH_OPERATORS is invalid.";
-    throw new Error(message);
+  } catch {
+    // Invalid AUTH_OPERATORS should not block Yahoo/seed logins.
   }
   const seed = seedFromEnv();
   if (seed && !rows.some((row) => normalizeEmail(row.email) === seed.email)) {
@@ -201,11 +223,71 @@ async function writeFileOperators(operators: StoredOperator[]): Promise<void> {
   await writeFile(FILE_PATH, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 }
 
+function parseStoredList(raw: string): StoredOperator[] {
+  let parsed: FileShape;
+  try {
+    parsed = JSON.parse(raw) as FileShape;
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed.operators)) return [];
+  const operators: StoredOperator[] = [];
+  for (const row of parsed.operators) {
+    if (!row?.id || !row.email || !row.passwordHash || !row.name) continue;
+    if (!isOperatorRole(row.role)) continue;
+    operators.push({
+      id: row.id,
+      name: row.name,
+      email: normalizeEmail(row.email),
+      role: row.role,
+      passwordHash: row.passwordHash,
+      source: "file",
+      createdAt: row.createdAt ?? null,
+    });
+  }
+  return operators;
+}
+
+async function readCookieOperators(): Promise<StoredOperator[]> {
+  try {
+    const store = await cookies();
+    const raw = unsignPayload(store.get(PEOPLE_COOKIE)?.value);
+    if (!raw) return [];
+    return parseStoredList(raw);
+  } catch {
+    return [];
+  }
+}
+
+async function writeCookieOperators(operators: StoredOperator[]): Promise<void> {
+  const store = await cookies();
+  const payload: FileShape = {
+    operators: operators.map((operator) => ({
+      id: operator.id,
+      name: operator.name,
+      email: operator.email,
+      role: operator.role,
+      passwordHash: operator.passwordHash,
+      createdAt: operator.createdAt ?? undefined,
+    })),
+  };
+  store.set(PEOPLE_COOKIE, signPayload(JSON.stringify(payload)), {
+    ...sessionCookieOptions(),
+    maxAge: 60 * 60 * 24 * 365,
+  });
+}
+
 export async function listStoredOperators(): Promise<StoredOperator[]> {
   const env = await envOperators();
   const file = await readFileOperators();
+  const cookie = await readCookieOperators();
   const emails = new Set(env.map((operator) => operator.email));
-  return [...env, ...file.filter((operator) => !emails.has(operator.email))];
+  const extra = [...file, ...cookie].filter((operator) => {
+    if (emails.has(operator.email)) return false;
+    emails.add(operator.email);
+    return true;
+  });
+  return [...env, ...extra];
 }
 
 export async function countOperators(): Promise<number> {
@@ -290,6 +372,54 @@ export async function createFileOperator(input: {
     throw error;
   }
   return { operator: listedOf(record) };
+}
+
+export async function createFirstAdministrator(input: {
+  name: string;
+  email: string;
+  password: string;
+}): Promise<{ operator: PublicOperator } | { error: string; status: number }> {
+  if ((await countOperators()) > 0) {
+    return {
+      error: "An administrator already exists. Sign in instead.",
+      status: 409,
+    };
+  }
+  const created = await createFileOperator({
+    name: input.name,
+    email: input.email,
+    role: "Administrator",
+    password: input.password,
+  });
+  if ("operator" in created) {
+    return { operator: created.operator };
+  }
+  if (created.status !== 503) {
+    return created;
+  }
+
+  const name = input.name.trim();
+  const email = normalizeEmail(input.email);
+  const record: StoredOperator = {
+    id: `op_${randomBytes(8).toString("hex")}`,
+    name,
+    email,
+    role: "Administrator",
+    passwordHash: await hashPassword(input.password),
+    source: "file",
+    createdAt: new Date().toISOString(),
+  };
+  try {
+    const existing = await readCookieOperators();
+    await writeCookieOperators([...existing, record]);
+  } catch {
+    return {
+      error:
+        "Could not save the first admin on this host. Set AUTH_SEED_EMAIL and AUTH_SEED_PASSWORD in Vercel, then redeploy.",
+      status: 503,
+    };
+  }
+  return { operator: publicOf(record) };
 }
 
 export async function deleteFileOperator(

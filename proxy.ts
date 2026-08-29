@@ -3,7 +3,12 @@ import type { NextRequest } from "next/server";
 import { safeInternalPath } from "@/lib/auth/paths";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth/session";
 
-const PUBLIC_PATHS = new Set(["/login", "/api/auth/login", "/api/auth/me"]);
+const PUBLIC_PATHS = new Set([
+  "/login",
+  "/api/auth/login",
+  "/api/auth/me",
+  "/api/auth/setup",
+]);
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

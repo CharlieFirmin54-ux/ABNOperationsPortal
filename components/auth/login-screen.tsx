@@ -14,6 +14,8 @@ type MeResponse = {
   configured: boolean;
   secretConfigured: boolean;
   configError: string | null;
+  canSetup?: boolean;
+  suggestedEmail?: string;
 };
 
 export function LoginScreen() {
@@ -51,15 +53,16 @@ function LoginForm() {
   const from = safeInternalPath(searchParams.get("from"));
   const signedOut = searchParams.get("reason") === "signed-out";
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("charlie@abnmaintenance.co.uk");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [fullName, setFullName] = useState("Charlie");
   const [error, setError] = useState("");
   const [info, setInfo] = useState(
     signedOut ? "You have been signed out." : ""
   );
   const [submitting, setSubmitting] = useState(false);
-  const [configured, setConfigured] = useState(true);
-  const [secretConfigured, setSecretConfigured] = useState(true);
+  const [canSetup, setCanSetup] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -72,9 +75,17 @@ function LoginForm() {
           router.replace(from);
           return;
         }
-        setConfigured(Boolean(data.configured));
-        setSecretConfigured(Boolean(data.secretConfigured));
+        const setup = Boolean(data.canSetup) || !data.configured;
+        setCanSetup(setup);
+        if (data.suggestedEmail) {
+          setEmail(data.suggestedEmail);
+        }
         if (data.configError) setError(data.configError);
+        else if (setup) {
+          setInfo(
+            "Nobody has a login on this server yet. Create the first administrator here, then you can open the portal."
+          );
+        }
         setReady(true);
       })
       .catch(() => {
@@ -94,26 +105,50 @@ function LoginForm() {
     setInfo("");
     setSubmitting(true);
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setError(data.error || "Could not sign in.");
-        return;
+      if (canSetup) {
+        if (password !== confirmPassword) {
+          setError("Those passwords do not match.");
+          return;
+        }
+        const response = await fetch("/api/auth/setup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: fullName,
+            email,
+            password,
+            confirmPassword,
+          }),
+        });
+        const data = (await response.json()) as { error?: string };
+        if (!response.ok) {
+          setError(data.error || "Could not create the first administrator.");
+          return;
+        }
+      } else {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = (await response.json()) as { error?: string };
+        if (!response.ok) {
+          setError(data.error || "Could not sign in.");
+          return;
+        }
       }
       router.replace(from);
       router.refresh();
     } catch {
-      setError("Could not sign in. Try again.");
+      setError(
+        canSetup
+          ? "Could not create the first administrator. Try again."
+          : "Could not sign in. Try again."
+      );
     } finally {
       setSubmitting(false);
     }
   }
-
-  const blocked = !configured || !secretConfigured;
 
   return (
     <LoginShell>
@@ -135,24 +170,26 @@ function LoginForm() {
                 {error}
               </p>
             )}
-            {!secretConfigured && (
-              <p className="mb-4 text-sm text-zinc-400">
-                Set <code className="text-zinc-300">AUTH_SECRET</code> in the
-                environment before anyone can sign in.
-              </p>
-            )}
-            {secretConfigured && !configured && (
-              <div className="mb-4 space-y-2 text-sm text-zinc-400">
-                <p>No operator logins have been set up.</p>
-                <p>
-                  Add <code className="text-zinc-300">AUTH_SEED_PASSWORD</code>{" "}
-                  for Charlie, or{" "}
-                  <code className="text-zinc-300">AUTH_OPERATORS</code> for the
-                  rest of the team.
-                </p>
-              </div>
-            )}
-            <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
+            <form
+              className="space-y-4"
+              onSubmit={(event) => void handleSubmit(event)}
+            >
+              {canSetup ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="name" className="text-zinc-300">
+                    Full name
+                  </Label>
+                  <Input
+                    id="name"
+                    autoComplete="name"
+                    value={fullName}
+                    onChange={(event) => setFullName(event.target.value)}
+                    className="h-10 rounded-xl border-white/10 bg-[#161616] text-white"
+                    disabled={submitting}
+                    required
+                  />
+                </div>
+              ) : null}
               <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-zinc-300">
                   Email
@@ -165,41 +202,62 @@ function LoginForm() {
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="charlie@abnmaintenance.co.uk"
                   className="h-10 rounded-xl border-white/10 bg-[#161616] text-white placeholder:text-zinc-600"
-                  disabled={blocked || submitting}
+                  disabled={submitting}
                   required
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="password" className="text-zinc-300">
-                  Password
+                  {canSetup ? "Choose a password" : "Password"}
                 </Label>
                 <Input
                   id="password"
                   type="password"
-                  autoComplete="current-password"
+                  autoComplete={canSetup ? "new-password" : "current-password"}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   className="h-10 rounded-xl border-white/10 bg-[#161616] text-white"
-                  disabled={blocked || submitting}
+                  disabled={submitting}
                   required
+                  minLength={canSetup ? 8 : undefined}
                 />
               </div>
+              {canSetup ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirm-password" className="text-zinc-300">
+                    Confirm password
+                  </Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    className="h-10 rounded-xl border-white/10 bg-[#161616] text-white"
+                    disabled={submitting}
+                    required
+                    minLength={8}
+                  />
+                </div>
+              ) : null}
               <Button
                 type="submit"
                 className="h-10 w-full rounded-xl bg-[#e11d2e] text-white hover:bg-[#c41626]"
-                disabled={blocked || submitting}
+                disabled={submitting}
               >
                 {submitting ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : null}
-                Sign in
+                {canSetup ? "Create administrator and enter" : "Sign in"}
               </Button>
             </form>
           </>
         )}
       </div>
       <p className="mt-4 text-center text-xs text-zinc-600">
-        Signed-in operators can open jobs, emails, and settings.
+        {canSetup
+          ? "This creates the first administrator for this server. Use the same email and password next time you sign in."
+          : "Signed-in operators can open jobs, emails, and settings."}
       </p>
     </LoginShell>
   );

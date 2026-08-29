@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { countOperators } from "@/lib/auth/operators";
+import { countOperators, suggestedLoginEmail } from "@/lib/auth/operators";
 import { readSession } from "@/lib/auth/guard";
 import { getAuthSecret } from "@/lib/auth/session";
 
@@ -7,10 +7,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  let operatorCount = 0;
   let configured = false;
   let configError: string | null = null;
   try {
-    configured = (await countOperators()) > 0;
+    operatorCount = await countOperators();
+    configured = operatorCount > 0;
   } catch (error) {
     configError =
       error instanceof Error ? error.message : "Could not load operator logins.";
@@ -21,5 +23,8 @@ export async function GET() {
     configured,
     secretConfigured: Boolean(getAuthSecret()),
     configError,
+    canSetup: !configured && !configError,
+    suggestedEmail: suggestedLoginEmail(),
+    operatorCount,
   });
 }
