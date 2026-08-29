@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://operations.abnmaintenance.co.uk"),
   title: "ABN Property Maintenance Operations Portal",
   description:
     "Live operations dashboard for ABN Property Maintenance jobs, properties, and repair emails.",

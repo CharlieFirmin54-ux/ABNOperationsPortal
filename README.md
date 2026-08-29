@@ -13,21 +13,49 @@ npm run dev
 
 Open [http://localhost:43127](http://localhost:43127).
 
-## Production
+## Production (operations.abnmaintenance.co.uk)
 
-Production hostname: **[operations.abnmaintenance.co.uk](https://operations.abnmaintenance.co.uk)**
+Intended public hostname: **[operations.abnmaintenance.co.uk](https://operations.abnmaintenance.co.uk)**
 
-IMAP credentials (`YAHOO_EMAIL`, `YAHOO_APP_PASSWORD`) must be set as Vercel project environment variables for Production (and Preview if you want mailbox data on preview deploys). Do not commit `.env.local`.
+This is a Next.js app with live Yahoo IMAP, so it needs a Node.js host (Vercel is the default). IONOS DNS currently points `operations` at a parking page (`217.160.0.70`), not this portal. IONOS shared Apache hosting cannot run the IMAP API routes.
+
+### Deploy on Vercel
+
+1. Install the Vercel CLI and log in (`npx vercel login`).
+2. From the repo root:
+
+```bash
+npx vercel --prod --yes
+```
+
+3. In the Vercel project, set **Production** environment variables (never commit `.env.local`):
+
+```bash
+YAHOO_EMAIL
+YAHOO_APP_PASSWORD
+```
+
+Optional: `YAHOO_IMAP_HOST` (default `imap.mail.yahoo.com`), `YAHOO_IMAP_PORT` (default `993`). Copy values from local `.env.local`. Preview deployments need the same vars if you want the live mailbox there too.
+
+4. Attach the custom domain:
+
+```bash
+npx vercel domains add operations.abnmaintenance.co.uk
+```
+
+Confirm with `npx vercel domains inspect operations.abnmaintenance.co.uk` and use the CNAME Vercel prints if it differs from the table below.
+
+`npm run build` must succeed before you deploy. IMAP routes already use the Node.js runtime (`maxDuration` 30–60s). Hobby plans cap serverless time at 10s, so mailbox refresh may need a Pro plan if Yahoo is slow.
 
 ### DNS (IONOS)
 
-The zone uses IONOS nameservers (`ns1116.ui-dns.org`, `ns1048.ui-dns.com`, `ns1056.ui-dns.de`, `ns1053.ui-dns.biz`). DNS cannot be changed from this repo. In the IONOS DNS panel for `abnmaintenance.co.uk`, replace the current `operations` A record (`217.160.0.70`) with:
+The zone uses IONOS nameservers (`ns1116.ui-dns.org`, `ns1048.ui-dns.com`, `ns1056.ui-dns.de`, `ns1053.ui-dns.biz`). DNS cannot be changed from this environment. In the IONOS DNS panel for `abnmaintenance.co.uk`, **replace** the current `operations` A (`217.160.0.70`) and AAAA (`2001:8d8:100f:f000::200`) records with:
 
 | Type | Host / Name | Value | TTL |
 | --- | --- | --- | --- |
 | CNAME | `operations` | `cname.vercel-dns-0.com` | 3600 (or default) |
 
-If IONOS refuses a CNAME because an A/AAAA already exists, delete the `operations` A and AAAA records first, then add the CNAME. Do not change the apex `abnmaintenance.co.uk` A record (marketing site).
+If IONOS refuses a CNAME because an A/AAAA already exists, delete those `operations` records first, then add the CNAME. Leave the apex `abnmaintenance.co.uk` records alone unless you also intend to move the root domain.
 
 Fallback if a CNAME is not accepted:
 
@@ -35,7 +63,7 @@ Fallback if a CNAME is not accepted:
 | --- | --- | --- |
 | A | `operations` | `76.76.21.21` |
 
-After DNS updates, HTTPS should be issued automatically by Vercel. Keep the local preview on [http://localhost:43127](http://localhost:43127).
+After DNS updates, Vercel issues HTTPS automatically. Until those records change, `https://operations.abnmaintenance.co.uk` is still the IONOS parking page (HTTPS currently fails there). Local preview stays on [http://localhost:43127](http://localhost:43127).
 
 ## What you can do
 
