@@ -38,12 +38,9 @@ export function Sidebar({
         className
       )}
     >
-      <div className="flex flex-col items-center px-6 pt-8 pb-6">
+      <div className="flex flex-col items-center px-4 pt-6 pb-6">
         <BrandLogo />
-        <div className="mt-5 text-center">
-          <p className="text-sm font-medium text-white">ABN Maintenance</p>
-          <p className="text-xs text-zinc-500">Operations Portal</p>
-        </div>
+        <p className="mt-3 text-xs text-zinc-500">Operations Portal</p>
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 px-3">
@@ -78,7 +75,7 @@ export function Sidebar({
           System Online
         </div>
         <p className="mt-3 text-[11px] leading-4 text-zinc-600">
-          ABN Maintenance
+          ABN Property Maintenance
           <br />
           Version 1.0.0
         </p>

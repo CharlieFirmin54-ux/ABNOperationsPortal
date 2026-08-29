@@ -1,8 +1,8 @@
-# ABN Maintenance Operations Portal
+# ABN Property Maintenance Operations Portal
 
-Dark-themed operations dashboard for **ABN Maintenance** — jobs, properties, repair emails, and workload reports.
+Dark-themed operations dashboard for **ABN Property Maintenance** — jobs, properties, repair emails, and workload reports.
 
-The interface follows the black / white / red operations theme: high-contrast cards, colour-coded priorities, and a live job list.
+The interface follows the black / white / red operations theme, with the ABN Property Maintenance logo in the sidebar.
 
 ## Run locally
 
@@ -19,7 +19,7 @@ Open [http://localhost:43127](http://localhost:43127).
 - Raise a test job or a full works order
 - Filter and open jobs, change status/priority, and add notes
 - Browse contracted properties and their job history
-- Read repair emails from tenants and letting agents
+- Read repair emails and open a **Yahoo mailbox** in a new tab
 - Check a simple workload report
 
 Data is stored in this browser so the portal runs without a database. Use **Settings → Reset demo data** to restore the seed jobs.

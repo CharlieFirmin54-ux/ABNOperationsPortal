@@ -14,11 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ABN Maintenance Operations Portal",
+  title: "ABN Property Maintenance Operations Portal",
   description:
-    "Live operations dashboard for ABN Maintenance jobs, properties, and repair emails.",
+    "Live operations dashboard for ABN Property Maintenance jobs, properties, and repair emails.",
   icons: {
-    icon: "/favicon.svg",
+    icon: "/abn-logo.png",
   },
 };
 

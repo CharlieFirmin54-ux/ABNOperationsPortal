@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell, Menu, Search, User } from "lucide-react";
+import { YahooMailboxLink } from "@/components/emails/yahoo-mailbox-link";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -131,6 +132,11 @@ export function Header() {
             </div>
           )}
         </div>
+
+        <YahooMailboxLink
+          label="Yahoo Mail"
+          className="hidden h-10 shrink-0 sm:inline-flex"
+        />
 
         <DropdownMenu>
           <DropdownMenuTrigger
