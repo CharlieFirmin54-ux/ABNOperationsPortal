@@ -54,6 +54,16 @@ export type InboxEmail = {
   jobId?: string;
 };
 
+export type InboxSource = "yahoo" | "demo" | "unconfigured";
+
+export type InboxFetchResult = {
+  source: InboxSource;
+  configured: boolean;
+  mailbox: string | null;
+  error: string | null;
+  emails: InboxEmail[];
+};
+
 export type JobNote = {
   id: string;
   jobId: string;

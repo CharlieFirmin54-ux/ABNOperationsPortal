@@ -32,8 +32,12 @@ export default function SettingsPage() {
       <section className="rounded-xl border border-white/8 bg-[#0c0c0c] p-5">
         <h3 className="text-sm font-medium text-white">Yahoo mailbox</h3>
         <p className="mt-2 max-w-2xl text-sm text-zinc-500">
-          Open Yahoo Mail in a new tab to sign in and use the ABN operations
-          inbox directly. Replies from the Emails page also launch Yahoo
+          The Emails page loads the Yahoo inbox over IMAP when{" "}
+          <code className="text-zinc-400">YAHOO_EMAIL</code> and{" "}
+          <code className="text-zinc-400">YAHOO_APP_PASSWORD</code> are set in{" "}
+          <code className="text-zinc-400">.env.local</code> (Yahoo app password,
+          not the account password). Until then it shows demo repair emails.
+          You can still open Yahoo Mail in a new tab; replies launch Yahoo
           compose.
         </p>
         <div className="mt-4">
