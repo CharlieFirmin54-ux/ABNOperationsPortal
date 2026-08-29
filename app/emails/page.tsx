@@ -28,8 +28,19 @@ export default function EmailsPage() {
         fresh ? "/api/emails?fresh=1" : "/api/emails",
         { cache: "no-store" }
       );
-      const data = (await response.json()) as InboxFetchResult;
-      setInbox(data);
+      const data = (await response.json()) as InboxFetchResult & {
+        error?: string;
+      };
+      if (!response.ok && !data.emails) {
+        setFetchError(data.error || "Could not reach the emails API.");
+        return;
+      }
+      setInbox((current) => {
+        if (data.source === "error" && current?.emails?.length && !data.emails?.length) {
+          return { ...current, error: data.error ?? current.error };
+        }
+        return data;
+      });
       if (fresh) void refreshMailbox(false);
     } catch {
       setFetchError("Could not reach the emails API.");

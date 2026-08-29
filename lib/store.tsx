@@ -257,7 +257,17 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
         fresh ? "/api/jobs?fresh=1" : "/api/jobs",
         { cache: "no-store" }
       );
-      const data = (await response.json()) as JobsFetchResult;
+      const data = (await response.json()) as JobsFetchResult & {
+        error?: string;
+      };
+      if (!response.ok && data.source == null) {
+        setMailbox({
+          source: "error",
+          configured: true,
+          error: data.error || "Could not reach the jobs API.",
+        });
+        return;
+      }
       setMailbox({
         source: data.source,
         configured: data.configured,
