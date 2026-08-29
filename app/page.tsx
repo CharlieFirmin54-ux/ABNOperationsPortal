@@ -136,7 +136,7 @@ export default function DashboardPage() {
             icon={<Circle className="size-3 fill-current" />}
           />
           <KpiCard
-            label="House Renovations"
+            label="House Turn Arounds"
             value={stats.houseTurnArounds}
             description="10 day turn around works from the mailbox."
             accent="violet"
