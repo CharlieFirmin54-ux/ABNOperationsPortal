@@ -6,6 +6,7 @@ import { JobsTable } from "@/components/jobs/jobs-table";
 import { MailboxNotice } from "@/components/mailbox-notice";
 import { Button } from "@/components/ui/button";
 import { isOpenJob } from "@/lib/format";
+import { HOUSE_RENOVATIONS_CATEGORY } from "@/lib/house-renovations";
 import { useOperations } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,10 @@ export default function DashboardPage() {
     const ttContacted = jobs.filter(
       (job) => job.status === "TT Contacted"
     ).length;
-    return { p1, open, completed, ttContacted };
+    const houseRenovations = jobs.filter(
+      (job) => job.category === HOUSE_RENOVATIONS_CATEGORY
+    ).length;
+    return { p1, open, completed, ttContacted, houseRenovations };
   }, [jobs]);
 
   const recent = useMemo(
@@ -83,7 +87,7 @@ export default function DashboardPage() {
 
       {!hydrated || (syncing && jobs.length === 0) ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
+          {Array.from({ length: 5 }).map((_, index) => (
             <div
               key={index}
               className="h-36 animate-pulse rounded-xl border border-white/8 bg-[#0c0c0c]"
@@ -118,6 +122,13 @@ export default function DashboardPage() {
             value={stats.ttContacted}
             description="Jobs where the tenant has been contacted."
             accent="blue"
+            icon={<Circle className="size-3 fill-current" />}
+          />
+          <KpiCard
+            label="House Renovations"
+            value={stats.houseRenovations}
+            description="10 day turn around works from the mailbox."
+            accent="violet"
             icon={<Circle className="size-3 fill-current" />}
           />
         </div>
@@ -160,7 +171,7 @@ function KpiCard({
   label: string;
   value: number;
   description: string;
-  accent: "red" | "gold" | "green" | "blue";
+  accent: "red" | "gold" | "green" | "blue" | "violet";
   icon: React.ReactNode;
 }) {
   const styles = {
@@ -179,6 +190,10 @@ function KpiCard({
     blue: {
       card: "border-blue-500/35 shadow-[0_0_28px_rgba(59,130,246,0.12)]",
       icon: "text-blue-500",
+    },
+    violet: {
+      card: "border-violet-500/35 shadow-[0_0_28px_rgba(139,92,246,0.12)]",
+      icon: "text-violet-400",
     },
   }[accent];
 

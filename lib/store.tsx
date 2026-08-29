@@ -9,6 +9,10 @@ import {
   useState,
 } from "react";
 import { nextJobNumber, normalizePriority, normalizeStatus } from "@/lib/format";
+import {
+  HOUSE_RENOVATIONS_CATEGORY,
+  resolveJobCategory,
+} from "@/lib/house-renovations";
 import type {
   InboxEmail,
   InboxSource,
@@ -281,7 +285,7 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
       organisation,
       priority: normalizePriority(input.priority),
       status: normalizeStatus(input.status ?? "Open"),
-      category: input.category,
+      category: resolveJobCategory(input.category, input.description),
       description: input.description.trim(),
       propertyId,
       createdAt: now,
@@ -433,7 +437,15 @@ export function useOperations() {
 export function jobMatchesQuery(job: Job, query: string) {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  return [job.jobNo, job.tenant, job.address, job.organisation, job.status, job.priority]
+  return [
+    job.jobNo,
+    job.tenant,
+    job.address,
+    job.organisation,
+    job.status,
+    job.priority,
+    job.category,
+  ]
     .join(" ")
     .toLowerCase()
     .includes(q);
@@ -458,4 +470,5 @@ export const CATEGORIES: JobCategory[] = [
   "Damp",
   "Carpentry",
   "General",
+  HOUSE_RENOVATIONS_CATEGORY,
 ];

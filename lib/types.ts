@@ -6,7 +6,8 @@ export type JobCategory =
   | "Electrical"
   | "Damp"
   | "Carpentry"
-  | "General";
+  | "General"
+  | "House Renovations";
 
 export type JobOrigin = "mailbox" | "local";
 

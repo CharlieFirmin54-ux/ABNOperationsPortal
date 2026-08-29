@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
-import type { JobStatus, Priority } from "@/lib/types";
+import { HOUSE_RENOVATIONS_CATEGORY } from "@/lib/house-renovations";
+import type { JobCategory, JobStatus, Priority } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const statusClass: Record<JobStatus, string> = {
@@ -20,6 +21,22 @@ export function PriorityBadge({ value }: { value: Priority }) {
 export function StatusBadge({ value }: { value: JobStatus }) {
   return (
     <Badge className={cn("h-6 rounded-full px-2.5 font-semibold", statusClass[value])}>
+      {value}
+    </Badge>
+  );
+}
+
+export function CategoryBadge({ value }: { value: JobCategory }) {
+  const renovation = value === HOUSE_RENOVATIONS_CATEGORY;
+  return (
+    <Badge
+      className={cn(
+        "h-6 rounded-full px-2.5 font-semibold",
+        renovation
+          ? "border-transparent bg-violet-600 text-white"
+          : "border-white/15 bg-white/8 text-zinc-200"
+      )}
+    >
       {value}
     </Badge>
   );

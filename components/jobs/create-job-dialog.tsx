@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { isHouseRenovationText } from "@/lib/house-renovations";
 import { CATEGORIES, PRIORITIES, STATUSES, useOperations } from "@/lib/store";
 import type { JobCategory, JobStatus, Priority } from "@/lib/types";
 
@@ -153,7 +154,7 @@ export function CreateJobDialog({
             </div>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="category">Trade</Label>
+            <Label htmlFor="category">Category</Label>
             <select
               id="category"
               value={category}
@@ -174,7 +175,13 @@ export function CreateJobDialog({
             <Textarea
               id="description"
               value={description}
-              onChange={(event) => setDescription(event.target.value)}
+              onChange={(event) => {
+                const next = event.target.value;
+                setDescription(next);
+                if (isHouseRenovationText(next)) {
+                  setCategory("House Renovations");
+                }
+              }}
               placeholder="What has failed, and what access is available?"
               className="min-h-24 border-white/10 bg-[#0c0c0c]"
             />

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PriorityBadge, StatusBadge } from "@/components/jobs/badges";
+import { CategoryBadge, PriorityBadge, StatusBadge } from "@/components/jobs/badges";
 import {
   Table,
   TableBody,
@@ -52,6 +52,9 @@ export function JobsTable({
           <TableHead className="h-11 px-4 text-[11px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
             Status
           </TableHead>
+          <TableHead className="h-11 px-4 text-[11px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
+            Category
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -80,6 +83,9 @@ export function JobsTable({
             </TableCell>
             <TableCell className="px-4 py-4">
               <StatusBadge value={job.status} />
+            </TableCell>
+            <TableCell className="px-4 py-4">
+              <CategoryBadge value={job.category} />
             </TableCell>
           </TableRow>
         ))}

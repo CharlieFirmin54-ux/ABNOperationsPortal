@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { PriorityBadge, StatusBadge } from "@/components/jobs/badges";
+import { CategoryBadge, PriorityBadge, StatusBadge } from "@/components/jobs/badges";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,9 +60,10 @@ export default function JobDetailPage() {
             {job.address}
           </h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <PriorityBadge value={job.priority} />
           <StatusBadge value={job.status} />
+          <CategoryBadge value={job.category} />
         </div>
       </div>
 
@@ -84,7 +85,7 @@ export default function JobDetailPage() {
             <Field label="Organisation" value={job.organisation} />
             <Field label="Phone" value={job.tenantPhone} />
             <Field label="Email" value={job.tenantEmail} />
-            <Field label="Trade" value={job.category} />
+            <Field label="Category" value={job.category} />
             <Field label="Raised" value={formatDateTime(job.createdAt)} />
             <Field label="Last updated" value={formatDateTime(job.updatedAt)} />
             {property && (

@@ -1,3 +1,7 @@
+import {
+  HOUSE_RENOVATIONS_CATEGORY,
+  isHouseRenovationText,
+} from "@/lib/house-renovations";
 import type {
   InboxEmail,
   Job,
@@ -125,7 +129,11 @@ export function isIgnoredMailboxEmail(email: InboxEmail): boolean {
 export function isJobRelatedEmail(email: InboxEmail): boolean {
   if (isIgnoredMailboxEmail(email)) return false;
   const haystack = `${email.subject}\n${email.body}`;
-  return JOB_POSITIVE.test(haystack) || SUBJECT_JOBSHEET_RE.test(email.subject);
+  return (
+    JOB_POSITIVE.test(haystack) ||
+    SUBJECT_JOBSHEET_RE.test(email.subject) ||
+    isHouseRenovationText(email.subject, email.body)
+  );
 }
 
 function extractJobNumber(subject: string, body: string): string | null {
@@ -291,11 +299,19 @@ function parseStatus(subject: string, body: string): JobStatus {
   return "Open";
 }
 
-function parseCategory(title: string, description: string): JobCategory {
+function parseCategory(
+  title: string,
+  description: string,
+  subject: string,
+  body: string
+): JobCategory {
+  if (isHouseRenovationText(subject, title, description, body)) {
+    return HOUSE_RENOVATIONS_CATEGORY;
+  }
   const titleText = title.toLowerCase();
   const fromTitle = categoryFromText(titleText);
   if (fromTitle) return fromTitle;
-  if (/\b(bird|10\s*day|turn around)\b/.test(titleText)) {
+  if (/\bbird\b/.test(titleText)) {
     return "General";
   }
   return categoryFromText(description.toLowerCase()) ?? "General";
@@ -372,13 +388,26 @@ function parseJobFromEmail(email: InboxEmail): Job | null {
     organisation: organisationFromEmail(email, email.body),
     priority: parsePriority(email.subject, email.body, title),
     status: parseStatus(email.subject, email.body),
-    category: parseCategory(title, description),
+    category: parseCategory(title, description, email.subject, email.body),
     description: description.slice(0, 4000),
     propertyId: address ? propertyIdFromAddress(address) : "prop-unspecified",
     createdAt,
     updatedAt: email.receivedAt,
     origin: "mailbox",
   };
+}
+
+function preferHouseRenovations(
+  primary: JobCategory,
+  secondary?: JobCategory
+): JobCategory {
+  if (
+    primary === HOUSE_RENOVATIONS_CATEGORY ||
+    secondary === HOUSE_RENOVATIONS_CATEGORY
+  ) {
+    return HOUSE_RENOVATIONS_CATEGORY;
+  }
+  return primary;
 }
 
 function scoreJob(job: Job): number {
@@ -446,15 +475,24 @@ export function buildMailboxFromEmails(emails: InboxEmail[]): MailboxBuild {
   for (const { job } of parsed) {
     const existing = byKey.get(job.jobNo);
     if (!existing || scoreJob(job) > scoreJob(existing)) {
-      byKey.set(job.jobNo, job);
+      byKey.set(job.jobNo, {
+        ...job,
+        category: preferHouseRenovations(job.category, existing?.category),
+      });
     } else if (new Date(job.updatedAt) > new Date(existing.updatedAt)) {
       byKey.set(job.jobNo, {
         ...existing,
         updatedAt: job.updatedAt,
+        category: preferHouseRenovations(existing.category, job.category),
         description:
           job.description.length > existing.description.length
             ? job.description
             : existing.description,
+      });
+    } else if (job.category === HOUSE_RENOVATIONS_CATEGORY) {
+      byKey.set(job.jobNo, {
+        ...existing,
+        category: HOUSE_RENOVATIONS_CATEGORY,
       });
     }
   }
