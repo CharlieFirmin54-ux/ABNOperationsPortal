@@ -59,7 +59,6 @@ export default function JobDetailPage() {
           <h2 className="mt-1 text-2xl font-semibold tracking-tight text-white md:text-3xl">
             {job.address}
           </h2>
-          <p className="mt-2 text-sm text-zinc-400">{job.description}</p>
         </div>
         <div className="flex items-center gap-2">
           <PriorityBadge value={job.priority} />
@@ -70,6 +69,16 @@ export default function JobDetailPage() {
       <div className="grid gap-4 lg:grid-cols-[1.4fr_0.8fr]">
         <section className="space-y-4 rounded-xl border border-white/8 bg-[#0c0c0c] p-5">
           <h3 className="text-sm font-medium text-white">Job details</h3>
+          {job.description ? (
+            <div className="rounded-lg border border-white/10 bg-black/50 p-4">
+              <p className="text-[11px] font-medium tracking-[0.14em] text-zinc-300 uppercase">
+                Fault
+              </p>
+              <p className="mt-2 text-base leading-relaxed text-zinc-50">
+                {job.description}
+              </p>
+            </div>
+          ) : null}
           <dl className="grid gap-4 sm:grid-cols-2">
             <Field label="Tenant" value={job.tenant} />
             <Field label="Organisation" value={job.organisation} />
@@ -80,7 +89,7 @@ export default function JobDetailPage() {
             <Field label="Last updated" value={formatDateTime(job.updatedAt)} />
             {property && (
               <div>
-                <dt className="text-xs tracking-wide text-zinc-500 uppercase">
+                <dt className="text-[11px] font-medium tracking-[0.14em] text-zinc-300 uppercase">
                   Property
                 </dt>
                 <dd className="mt-1">
@@ -201,7 +210,9 @@ export default function JobDetailPage() {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs tracking-wide text-zinc-500 uppercase">{label}</dt>
+      <dt className="text-[11px] font-medium tracking-[0.14em] text-zinc-300 uppercase">
+        {label}
+      </dt>
       <dd className="mt-1 text-sm text-white">{value}</dd>
     </div>
   );
