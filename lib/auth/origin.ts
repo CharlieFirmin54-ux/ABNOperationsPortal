@@ -1,20 +1,26 @@
 export function isSameOrigin(request: Request): boolean {
-  const expected = new URL(request.url).origin;
-  const origin = request.headers.get("origin");
-  if (origin) {
-    return parseOrigin(origin) === expected;
-  }
+  const originHeader = request.headers.get("origin");
   const referer = request.headers.get("referer");
-  if (referer) {
-    return parseOrigin(referer) === expected;
-  }
-  return false;
-}
+  const raw = originHeader || referer;
+  if (!raw) return false;
 
-function parseOrigin(value: string): string | null {
+  let originUrl: URL;
   try {
-    return new URL(value).origin;
+    originUrl = new URL(raw);
   } catch {
-    return null;
+    return false;
   }
+
+  const host = request.headers.get("host")?.trim() ?? "";
+  if (!host || originUrl.host !== host) return false;
+
+  const forwardedProto = request.headers
+    .get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim()
+    .toLowerCase();
+  if (forwardedProto && originUrl.protocol !== `${forwardedProto}:`) {
+    return false;
+  }
+  return true;
 }
