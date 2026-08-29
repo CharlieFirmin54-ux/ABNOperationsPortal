@@ -261,11 +261,18 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
         error?: string;
       };
       if (!response.ok && data.source == null) {
-        setMailbox({
-          source: "error",
+        setMailbox((current) => ({
+          ...current,
+          error: current.source === "yahoo" ? null : data.error || "Could not reach the jobs API.",
+        }));
+        return;
+      }
+      if (data.source === "error" && !(data.emails?.length || data.jobs?.length)) {
+        setMailbox((current) => ({
+          source: current.source === "yahoo" ? "yahoo" : data.source,
           configured: true,
-          error: data.error || "Could not reach the jobs API.",
-        });
+          error: current.source === "yahoo" ? null : data.error,
+        }));
         return;
       }
       setMailbox({
@@ -275,11 +282,14 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
       });
       setState((current) => mergeMailbox(current, data));
     } catch {
-      setMailbox({
-        source: "error",
-        configured: true,
-        error: "Could not reach the jobs API.",
-      });
+      setMailbox((current) => ({
+        ...current,
+        source: current.source === "yahoo" ? "yahoo" : "error",
+        error:
+          current.source === "yahoo"
+            ? null
+            : "Could not reach the jobs API.",
+      }));
     } finally {
       setSyncing(false);
     }

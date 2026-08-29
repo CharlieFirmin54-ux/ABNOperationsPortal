@@ -270,6 +270,10 @@ async function resolveImapHost(hostname: string): Promise<{
   return { host: hostname, servername: hostname };
 }
 
+async function sleep(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function withYahooInbox<T>(
   work: (client: ImapFlow) => Promise<T>,
   timeoutMs = FETCH_TIMEOUT_MS
@@ -280,61 +284,69 @@ async function withYahooInbox<T>(
   }
 
   const resolved = await resolveImapHost(auth.host);
-  const client = new ImapFlow({
-    host: resolved.host,
-    servername: resolved.servername,
-    port: auth.port,
-    secure: true,
-    disableAutoIdle: true,
-    disableCompression: true,
-    auth: {
-      user: auth.user,
-      pass: auth.pass,
-      loginMethod: "LOGIN",
-    },
-    tls: {
+  let lastError: unknown = new Error("Could not connect to Yahoo IMAP.");
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const client = new ImapFlow({
+      host: resolved.host,
       servername: resolved.servername,
-      minVersion: "TLSv1.2",
-    },
-    logger: false,
-    emitLogs: false,
-    logRaw: false,
-    connectionTimeout: CONNECT_TIMEOUT_MS,
-    greetingTimeout: CONNECT_TIMEOUT_MS,
-    socketTimeout: timeoutMs,
-  });
+      port: auth.port,
+      secure: true,
+      disableAutoIdle: true,
+      disableCompression: true,
+      auth: {
+        user: auth.user,
+        pass: auth.pass,
+        loginMethod: "LOGIN",
+      },
+      tls: {
+        servername: resolved.servername,
+        minVersion: "TLSv1.2",
+      },
+      logger: false,
+      emitLogs: false,
+      logRaw: false,
+      connectionTimeout: CONNECT_TIMEOUT_MS,
+      greetingTimeout: CONNECT_TIMEOUT_MS,
+      socketTimeout: timeoutMs,
+    });
 
-  let socketError: Error | null = null;
-  client.on("error", (err) => {
-    socketError = err instanceof Error ? err : new Error(String(err));
-  });
+    let socketError: Error | null = null;
+    client.on("error", (err) => {
+      socketError = err instanceof Error ? err : new Error(String(err));
+    });
 
-  const timer = setTimeout(() => {
-    client.close();
-  }, timeoutMs);
+    const timer = setTimeout(() => {
+      client.close();
+    }, timeoutMs);
 
-  try {
-    await client.connect();
-    const lock = await client.getMailboxLock("INBOX");
     try {
-      return await work(client);
-    } finally {
-      lock.release();
-    }
-  } catch (error) {
-    throw socketError ?? error;
-  } finally {
-    clearTimeout(timer);
-    try {
-      await client.logout();
-    } catch {
+      await client.connect();
+      const lock = await client.getMailboxLock("INBOX");
       try {
-        client.close();
+        return await work(client);
+      } finally {
+        lock.release();
+      }
+    } catch (error) {
+      lastError = socketError ?? error;
+    } finally {
+      clearTimeout(timer);
+      try {
+        await client.logout();
       } catch {
-        // Connection may already be closed after a timeout.
+        try {
+          client.close();
+        } catch {
+          // Connection may already be closed after a timeout.
+        }
       }
     }
+
+    if (attempt < 2) await sleep(300 * (attempt + 1));
   }
+
+  throw lastError;
 }
 
 async function mapImapMessage(message: {
