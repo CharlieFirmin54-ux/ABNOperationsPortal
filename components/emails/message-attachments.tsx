@@ -43,7 +43,10 @@ export function MessageAttachments({
           {attachments.map((file) => {
             const href = attachmentHref(messageId, file.partId);
             const downloadHref = attachmentHref(messageId, file.partId, true);
-            const previewable = isInlinePreviewable(file.contentType);
+            const previewable = isInlinePreviewable(
+              file.contentType,
+              file.filename
+            );
             const active = previewPartId === file.partId;
             const sizeLabel = formatBytes(file.size);
             return (
@@ -115,7 +118,7 @@ export function MessageAttachments({
         </div>
       )}
 
-      {preview && previewUrl && isPdfAttachment(preview.contentType) && (
+      {preview && previewUrl && isPdfAttachment(preview.contentType, preview.filename) && (
         <iframe
           title={preview.filename}
           src={previewUrl}

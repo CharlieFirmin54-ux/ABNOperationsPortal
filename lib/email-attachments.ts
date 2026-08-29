@@ -36,8 +36,12 @@ export function mediaType(contentType: string): string {
   return contentType.split(";")[0].trim().toLowerCase();
 }
 
-export function isInlinePreviewable(contentType: string): boolean {
-  return INLINE_TYPES.has(mediaType(contentType));
+export function isInlinePreviewable(
+  contentType: string,
+  filename = ""
+): boolean {
+  if (INLINE_TYPES.has(mediaType(contentType))) return true;
+  return filename.toLowerCase().endsWith(".pdf");
 }
 
 export function isImageAttachment(contentType: string): boolean {
@@ -45,8 +49,50 @@ export function isImageAttachment(contentType: string): boolean {
   return type.startsWith("image/") && type !== "image/svg+xml";
 }
 
-export function isPdfAttachment(contentType: string): boolean {
-  return mediaType(contentType) === "application/pdf";
+export function isPdfAttachment(contentType: string, filename = ""): boolean {
+  if (mediaType(contentType) === "application/pdf") return true;
+  return filename.toLowerCase().endsWith(".pdf");
+}
+
+export function sniffContentType(
+  contentType: string,
+  filename: string,
+  content: Uint8Array
+): string {
+  const type = mediaType(contentType);
+  if (type && type !== "application/octet-stream") return type;
+  if (
+    content.length >= 5 &&
+    content[0] === 0x25 &&
+    content[1] === 0x50 &&
+    content[2] === 0x44 &&
+    content[3] === 0x46 &&
+    content[4] === 0x2d
+  ) {
+    return "application/pdf";
+  }
+  if (
+    content.length >= 3 &&
+    content[0] === 0xff &&
+    content[1] === 0xd8 &&
+    content[2] === 0xff
+  ) {
+    return "image/jpeg";
+  }
+  if (
+    content.length >= 8 &&
+    content[0] === 0x89 &&
+    content[1] === 0x50 &&
+    content[2] === 0x4e &&
+    content[3] === 0x47
+  ) {
+    return "image/png";
+  }
+  const lower = filename.toLowerCase();
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  return type || "application/octet-stream";
 }
 
 export function safeFilename(name: string): string {

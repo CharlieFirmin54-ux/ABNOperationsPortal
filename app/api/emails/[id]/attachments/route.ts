@@ -10,6 +10,7 @@ import {
   fetchYahooAttachment,
   getYahooImapConfig,
   sanitizeImapError,
+  YahooAttachmentNotFoundError,
 } from "@/lib/yahoo-imap";
 
 export const runtime = "nodejs";
@@ -82,6 +83,9 @@ export async function GET(
       download
     );
   } catch (err) {
+    if (err instanceof YahooAttachmentNotFoundError) {
+      return jsonError(err.message, 404);
+    }
     return jsonError(
       sanitizeImapError(err, "Could not open that attachment."),
       502

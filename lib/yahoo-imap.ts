@@ -4,6 +4,7 @@ import type { EmailAttachment, InboxEmail } from "@/lib/types";
 import {
   defaultFilename,
   safeFilename,
+  sniffContentType,
 } from "@/lib/email-attachments";
 
 const DEFAULT_HOST = "imap.mail.yahoo.com";
@@ -354,14 +355,11 @@ export async function fetchYahooInbox(
   });
 }
 
-async function readableToBuffer(
-  stream: NodeJS.ReadableStream
-): Promise<Buffer> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+export class YahooAttachmentNotFoundError extends Error {
+  constructor() {
+    super("That attachment is not available.");
+    this.name = "YahooAttachmentNotFoundError";
   }
-  return Buffer.concat(chunks);
 }
 
 export async function fetchYahooAttachment(
@@ -369,25 +367,31 @@ export async function fetchYahooAttachment(
   partId: string
 ): Promise<YahooAttachmentPayload> {
   return withYahooInbox(async (client) => {
-    const downloaded = await client.download(String(uid), partId, {
+    const parts = await client.downloadMany(String(uid), [partId], {
       uid: true,
-      maxBytes: MAX_ATTACHMENT_BYTES,
     });
+    const downloaded = parts[partId];
+    const raw = downloaded?.content;
+    if (!raw || !raw.length) {
+      throw new YahooAttachmentNotFoundError();
+    }
 
-    if (
-      downloaded.meta.expectedSize > 0 &&
-      downloaded.meta.expectedSize > MAX_ATTACHMENT_BYTES
-    ) {
+    const content = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+    if (content.length > MAX_ATTACHMENT_BYTES) {
       throw new Error("That attachment is too large to open in the portal.");
     }
 
-    const content = await readableToBuffer(downloaded.content);
-    const contentType = (
-      downloaded.meta.contentType?.split(";")[0].trim() ||
-      "application/octet-stream"
-    ).toLowerCase();
     const filename = safeFilename(
-      downloaded.meta.filename || defaultFilename(contentType, partId)
+      downloaded.meta?.filename ||
+        defaultFilename(
+          downloaded.meta?.contentType || "application/octet-stream",
+          partId
+        )
+    );
+    const contentType = sniffContentType(
+      downloaded.meta?.contentType || "application/octet-stream",
+      filename,
+      content
     );
 
     return { filename, contentType, content };
