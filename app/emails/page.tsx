@@ -140,7 +140,7 @@ export default function EmailsPage() {
                     body: `\n\n---\nOn ${formatDateTime(selected.receivedAt)}, ${selected.fromName} wrote:\n${selected.body}`,
                   })}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-sm text-[#9f7aea] hover:text-white"
                 >
                   Reply in Yahoo Mail

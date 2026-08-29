@@ -11,6 +11,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand/logo";
+import { YahooMailboxLink } from "@/components/emails/yahoo-mailbox-link";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -67,6 +68,7 @@ export function Sidebar({
             </Link>
           );
         })}
+        <YahooMailboxLink appearance="nav" label="Yahoo Mail" />
       </nav>
 
       <div className="px-5 pb-6 pt-4">
