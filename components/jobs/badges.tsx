@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { ELECTRICAL_CERTS_CATEGORY } from "@/lib/electrical-certs";
 import { categoryLabel } from "@/lib/format";
-import { HOUSE_TURN_AROUNDS_CATEGORY } from "@/lib/house-turn-arounds";
+import { isHouseTurnAroundsCategory } from "@/lib/house-turn-arounds";
 import type { JobCategory, JobStatus, Priority } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +33,7 @@ export function StatusBadge({ value }: { value: JobStatus }) {
 }
 
 export function CategoryBadge({ value }: { value: JobCategory }) {
-  const turnAround = value === HOUSE_TURN_AROUNDS_CATEGORY;
+  const turnAround = isHouseTurnAroundsCategory(value);
   const electrical = value === ELECTRICAL_CERTS_CATEGORY;
   return (
     <Badge

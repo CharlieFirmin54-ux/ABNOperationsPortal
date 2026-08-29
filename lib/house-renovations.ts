@@ -1,5 +1,5 @@
 /**
- * Compatibility shim: the category label is House Turn Arounds.
+ * Compatibility shim for the House Renovations category.
  * Detection is unchanged (10-day turnaround phrases in job emails).
  */
 export {

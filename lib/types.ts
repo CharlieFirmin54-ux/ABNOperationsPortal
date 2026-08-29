@@ -3,7 +3,7 @@ export type JobStatus = "Open" | "TT Contacted" | "Completed";
 export type JobCategory =
   | "Normal"
   | "Electrical certs"
-  | "House Turn Arounds";
+  | "House Renovations";
 
 export type JobOrigin = "mailbox" | "local";
 

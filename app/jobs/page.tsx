@@ -9,7 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { electricalCertsPillClass } from "@/components/jobs/badges";
 import { ELECTRICAL_CERTS_CATEGORY } from "@/lib/electrical-certs";
-import { HOUSE_TURN_AROUNDS_CATEGORY } from "@/lib/house-turn-arounds";
+import {
+  HOUSE_TURN_AROUNDS_CATEGORY,
+  isHouseTurnAroundsCategory,
+} from "@/lib/house-turn-arounds";
 import { jobMatchesQuery, useOperations } from "@/lib/store";
 import type { JobStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -45,8 +48,8 @@ export default function JobsPage() {
       if (flag === ELECTRICAL_CERTS_CATEGORY) {
         return job.category === ELECTRICAL_CERTS_CATEGORY;
       }
-      if (flag === HOUSE_TURN_AROUNDS_CATEGORY) {
-        return job.category === HOUSE_TURN_AROUNDS_CATEGORY;
+      if (isHouseTurnAroundsCategory(flag)) {
+        return isHouseTurnAroundsCategory(job.category);
       }
       return job.status === flag;
     });

@@ -7,7 +7,7 @@ import { MailboxNotice } from "@/components/mailbox-notice";
 import { Button } from "@/components/ui/button";
 import { isOpenJob } from "@/lib/format";
 import { ELECTRICAL_CERTS_CATEGORY } from "@/lib/electrical-certs";
-import { HOUSE_TURN_AROUNDS_CATEGORY } from "@/lib/house-turn-arounds";
+import { isHouseTurnAroundsCategory } from "@/lib/house-turn-arounds";
 import { useOperations } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -25,8 +25,8 @@ export default function DashboardPage() {
     const ttContacted = jobs.filter(
       (job) => job.status === "TT Contacted"
     ).length;
-    const houseTurnArounds = jobs.filter(
-      (job) => job.category === HOUSE_TURN_AROUNDS_CATEGORY
+    const houseTurnArounds = jobs.filter((job) =>
+      isHouseTurnAroundsCategory(job.category)
     ).length;
     const electricalCerts = jobs.filter(
       (job) => job.category === ELECTRICAL_CERTS_CATEGORY
@@ -136,7 +136,7 @@ export default function DashboardPage() {
             icon={<Circle className="size-3 fill-current" />}
           />
           <KpiCard
-            label="House Turn Arounds"
+            label="House Renovations"
             value={stats.houseTurnArounds}
             description="10 day turn around works from the mailbox."
             accent="violet"

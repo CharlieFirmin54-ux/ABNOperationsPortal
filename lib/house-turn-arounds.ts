@@ -1,9 +1,9 @@
 import type { JobCategory } from "@/lib/types";
 
-export const HOUSE_TURN_AROUNDS_CATEGORY = "House Turn Arounds" as const;
+export const HOUSE_TURN_AROUNDS_CATEGORY = "House Renovations" as const;
 
-/** Previous label; map persisted mailbox patches onto the current name. */
-export const LEGACY_HOUSE_RENOVATIONS_CATEGORY = "House Renovations";
+/** Intermediate mailbox label; still accepted when hydrating stored jobs. */
+export const LEGACY_HOUSE_TURN_AROUNDS_CATEGORY = "House Turn Arounds";
 
 /**
  * "10 Day turn around" and flexible variants: hyphens, extra spaces,
@@ -33,6 +33,6 @@ export function isHouseTurnAroundsCategory(
 ): boolean {
   return (
     value === HOUSE_TURN_AROUNDS_CATEGORY ||
-    value === LEGACY_HOUSE_RENOVATIONS_CATEGORY
+    value === LEGACY_HOUSE_TURN_AROUNDS_CATEGORY
   );
 }
