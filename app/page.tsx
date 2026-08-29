@@ -7,7 +7,7 @@ import { MailboxNotice } from "@/components/mailbox-notice";
 import { Button } from "@/components/ui/button";
 import { isOpenJob } from "@/lib/format";
 import { ELECTRICAL_CERTS_CATEGORY } from "@/lib/electrical-certs";
-import { HOUSE_RENOVATIONS_CATEGORY } from "@/lib/house-renovations";
+import { HOUSE_TURN_AROUNDS_CATEGORY } from "@/lib/house-turn-arounds";
 import { useOperations } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -25,13 +25,13 @@ export default function DashboardPage() {
     const ttContacted = jobs.filter(
       (job) => job.status === "TT Contacted"
     ).length;
-    const houseRenovations = jobs.filter(
-      (job) => job.category === HOUSE_RENOVATIONS_CATEGORY
+    const houseTurnArounds = jobs.filter(
+      (job) => job.category === HOUSE_TURN_AROUNDS_CATEGORY
     ).length;
     const electricalCerts = jobs.filter(
       (job) => job.category === ELECTRICAL_CERTS_CATEGORY
     ).length;
-    return { p1, open, completed, ttContacted, houseRenovations, electricalCerts };
+    return { p1, open, completed, ttContacted, houseTurnArounds, electricalCerts };
   }, [jobs]);
 
   const recent = useMemo(
@@ -136,8 +136,8 @@ export default function DashboardPage() {
             icon={<Circle className="size-3 fill-current" />}
           />
           <KpiCard
-            label="House Renovations"
-            value={stats.houseRenovations}
+            label="House Turn Arounds"
+            value={stats.houseTurnArounds}
             description="10 day turn around works from the mailbox."
             accent="violet"
             icon={<Circle className="size-3 fill-current" />}

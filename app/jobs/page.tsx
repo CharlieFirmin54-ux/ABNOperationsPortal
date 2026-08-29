@@ -8,7 +8,7 @@ import { MailboxNotice } from "@/components/mailbox-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ELECTRICAL_CERTS_CATEGORY } from "@/lib/electrical-certs";
-import { HOUSE_RENOVATIONS_CATEGORY } from "@/lib/house-renovations";
+import { HOUSE_TURN_AROUNDS_CATEGORY } from "@/lib/house-turn-arounds";
 import { jobMatchesQuery, useOperations } from "@/lib/store";
 import type { JobStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,7 @@ type JobListFilter =
   | "P1"
   | JobStatus
   | typeof ELECTRICAL_CERTS_CATEGORY
-  | typeof HOUSE_RENOVATIONS_CATEGORY;
+  | typeof HOUSE_TURN_AROUNDS_CATEGORY;
 
 const JOB_FILTERS: JobListFilter[] = [
   "All",
@@ -27,7 +27,7 @@ const JOB_FILTERS: JobListFilter[] = [
   "TT Contacted",
   "Completed",
   ELECTRICAL_CERTS_CATEGORY,
-  HOUSE_RENOVATIONS_CATEGORY,
+  HOUSE_TURN_AROUNDS_CATEGORY,
 ];
 
 export default function JobsPage() {
@@ -44,8 +44,8 @@ export default function JobsPage() {
       if (flag === ELECTRICAL_CERTS_CATEGORY) {
         return job.category === ELECTRICAL_CERTS_CATEGORY;
       }
-      if (flag === HOUSE_RENOVATIONS_CATEGORY) {
-        return job.category === HOUSE_RENOVATIONS_CATEGORY;
+      if (flag === HOUSE_TURN_AROUNDS_CATEGORY) {
+        return job.category === HOUSE_TURN_AROUNDS_CATEGORY;
       }
       return job.status === flag;
     });

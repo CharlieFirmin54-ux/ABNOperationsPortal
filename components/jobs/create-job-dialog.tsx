@@ -16,7 +16,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { isElectricalCertText } from "@/lib/electrical-certs";
 import { categoryLabel } from "@/lib/format";
-import { isHouseRenovationText } from "@/lib/house-renovations";
+import {
+  HOUSE_TURN_AROUNDS_CATEGORY,
+  isHouseTurnAroundText,
+} from "@/lib/house-turn-arounds";
 import { CATEGORIES, PRIORITIES, STATUSES, useOperations } from "@/lib/store";
 import type { JobCategory, JobStatus, Priority } from "@/lib/types";
 
@@ -180,8 +183,8 @@ export function CreateJobDialog({
               onChange={(event) => {
                 const next = event.target.value;
                 setDescription(next);
-                if (isHouseRenovationText(next)) {
-                  setCategory("House Renovations");
+                if (isHouseTurnAroundText(next)) {
+                  setCategory(HOUSE_TURN_AROUNDS_CATEGORY);
                 } else if (isElectricalCertText(next)) {
                   setCategory("Electrical certs");
                 }

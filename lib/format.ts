@@ -1,5 +1,8 @@
 import { ELECTRICAL_CERTS_CATEGORY } from "@/lib/electrical-certs";
-import { HOUSE_RENOVATIONS_CATEGORY } from "@/lib/house-renovations";
+import {
+  HOUSE_TURN_AROUNDS_CATEGORY,
+  isHouseTurnAroundsCategory,
+} from "@/lib/house-turn-arounds";
 import type { Job, JobCategory, JobStatus, Priority } from "@/lib/types";
 
 export function formatLongDate(value: Date | string = new Date()) {
@@ -64,7 +67,7 @@ export function normalizeStatus(value: string | undefined | null): JobStatus {
 export function normalizeCategory(
   value: string | undefined | null
 ): JobCategory {
-  if (value === HOUSE_RENOVATIONS_CATEGORY) return HOUSE_RENOVATIONS_CATEGORY;
+  if (isHouseTurnAroundsCategory(value)) return HOUSE_TURN_AROUNDS_CATEGORY;
   if (value === ELECTRICAL_CERTS_CATEGORY) return ELECTRICAL_CERTS_CATEGORY;
   return "Normal";
 }

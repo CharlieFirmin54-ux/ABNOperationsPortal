@@ -3,9 +3,9 @@ import {
   isElectricalCertText,
 } from "@/lib/electrical-certs";
 import {
-  HOUSE_RENOVATIONS_CATEGORY,
-  isHouseRenovationText,
-} from "@/lib/house-renovations";
+  HOUSE_TURN_AROUNDS_CATEGORY,
+  isHouseTurnAroundText,
+} from "@/lib/house-turn-arounds";
 import type {
   InboxEmail,
   Job,
@@ -136,7 +136,7 @@ export function isJobRelatedEmail(email: InboxEmail): boolean {
   return (
     JOB_POSITIVE.test(haystack) ||
     SUBJECT_JOBSHEET_RE.test(email.subject) ||
-    isHouseRenovationText(email.subject, email.body) ||
+    isHouseTurnAroundText(email.subject, email.body) ||
     isElectricalCertText(email.subject, email.body)
   );
 }
@@ -310,8 +310,8 @@ function parseCategory(
   subject: string,
   body: string
 ): JobCategory {
-  if (isHouseRenovationText(subject, title, description, body)) {
-    return HOUSE_RENOVATIONS_CATEGORY;
+  if (isHouseTurnAroundText(subject, title, description, body)) {
+    return HOUSE_TURN_AROUNDS_CATEGORY;
   }
   if (isElectricalCertText(subject, title, description, body)) {
     return ELECTRICAL_CERTS_CATEGORY;
@@ -387,10 +387,10 @@ function preferSpecialCategory(
   secondary?: JobCategory
 ): JobCategory {
   if (
-    primary === HOUSE_RENOVATIONS_CATEGORY ||
-    secondary === HOUSE_RENOVATIONS_CATEGORY
+    primary === HOUSE_TURN_AROUNDS_CATEGORY ||
+    secondary === HOUSE_TURN_AROUNDS_CATEGORY
   ) {
-    return HOUSE_RENOVATIONS_CATEGORY;
+    return HOUSE_TURN_AROUNDS_CATEGORY;
   }
   if (
     primary === ELECTRICAL_CERTS_CATEGORY ||
@@ -481,7 +481,7 @@ export function buildMailboxFromEmails(emails: InboxEmail[]): MailboxBuild {
             : existing.description,
       });
     } else if (
-      job.category === HOUSE_RENOVATIONS_CATEGORY ||
+      job.category === HOUSE_TURN_AROUNDS_CATEGORY ||
       job.category === ELECTRICAL_CERTS_CATEGORY
     ) {
       byKey.set(job.jobNo, {

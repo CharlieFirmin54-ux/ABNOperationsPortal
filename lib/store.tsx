@@ -16,9 +16,9 @@ import {
   normalizeStatus,
 } from "@/lib/format";
 import {
-  HOUSE_RENOVATIONS_CATEGORY,
-  isHouseRenovationText,
-} from "@/lib/house-renovations";
+  HOUSE_TURN_AROUNDS_CATEGORY,
+  isHouseTurnAroundText,
+} from "@/lib/house-turn-arounds";
 import type {
   InboxEmail,
   InboxSource,
@@ -141,7 +141,7 @@ function resolveCreatedCategory(
   fallback: JobCategory,
   description: string
 ): JobCategory {
-  if (isHouseRenovationText(description)) return HOUSE_RENOVATIONS_CATEGORY;
+  if (isHouseTurnAroundText(description)) return HOUSE_TURN_AROUNDS_CATEGORY;
   if (isElectricalCertText(description)) return ELECTRICAL_CERTS_CATEGORY;
   return normalizeCategory(fallback);
 }
@@ -483,5 +483,5 @@ export const PRIORITIES: Priority[] = ["P1", "Normal"];
 export const CATEGORIES: JobCategory[] = [
   "Normal",
   ELECTRICAL_CERTS_CATEGORY,
-  HOUSE_RENOVATIONS_CATEGORY,
+  HOUSE_TURN_AROUNDS_CATEGORY,
 ];
