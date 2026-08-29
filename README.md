@@ -7,18 +7,14 @@ The interface follows the black / white / red operations theme, with the ABN Pro
 ## Run locally
 
 ```bash
+cp .env.example .env.local
+# Set AUTH_USERNAME, AUTH_PASSWORD, and AUTH_SECRET (32+ random characters).
+# openssl rand -base64 32
 npm install
 npm run dev
 ```
 
-Open [http://localhost:43127](http://localhost:43127). Everyone on the team uses the same login:
-
-- **Username:** `ABN2026`
-- **Password:** `BeckRowABN!`
-
-Change that pair with `AUTH_USERNAME` and `AUTH_PASSWORD` in `.env.local` or on Vercel if you need to.
-
-## Production (operations.abnmaintenance.co.uk)
+Open [http://localhost:43127](http://localhost:43127). Everyone on the team uses the same `AUTH_USERNAME` / `AUTH_PASSWORD`. Never commit `.env.local`.
 
 ## Production (operations.abnmaintenance.co.uk)
 
@@ -38,11 +34,14 @@ npx vercel --prod --yes
 3. In the Vercel project, set **Production** environment variables (never commit `.env.local` or passwords):
 
 ```bash
+AUTH_USERNAME
+AUTH_PASSWORD
+AUTH_SECRET
 YAHOO_EMAIL
 YAHOO_APP_PASSWORD
 ```
 
-Login does not need extra AUTH keys. The team username and password are built in (`ABN2026` / `BeckRowABN!`). Optional overrides: `AUTH_USERNAME`, `AUTH_PASSWORD`, `AUTH_SECRET`.
+`AUTH_SECRET` must be at least 32 characters (`openssl rand -base64 32`). Production refuses to sign sessions without it, and there is no built-in team password.
 
 Optional: `YAHOO_IMAP_HOST` (default `imap.mail.yahoo.com`), `YAHOO_IMAP_PORT` (default `993`). Copy mailbox values from local `.env.local`. Preview deployments need the same vars if you want the live mailbox there too.
 
@@ -89,17 +88,14 @@ Jobs are parsed from the connected mailbox (jobsheets and repair reports). Local
 
 ## Team login
 
-The portal uses a signed httpOnly session cookie. Everyone shares one username and password:
-
-- Username: `ABN2026`
-- Password: `BeckRowABN!`
+The portal uses a signed httpOnly session cookie. Everyone shares one username and password from environment variables:
 
 | Variable | Purpose |
 | --- | --- |
-| `AUTH_USERNAME` / `AUTH_PASSWORD` | Optional. Override the team login. |
-| `AUTH_SECRET` | Optional. Signs the session cookie. The app falls back if it is missing. |
+| `AUTH_USERNAME` / `AUTH_PASSWORD` | Required team login. |
+| `AUTH_SECRET` | Required in production. Signs the session cookie (32+ characters). |
 
-## Yahoo inbox (IMAP)
+Rotate these if they were ever committed or shared. This repository is public, so real passwords must never live in git.
 
 ## Yahoo inbox (IMAP)
 
