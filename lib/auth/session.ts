@@ -11,6 +11,8 @@ type TokenPayload = SessionOperator & { exp: number };
 export function getAuthSecret(): string {
   const explicit = process.env.AUTH_SECRET?.trim();
   if (explicit) return explicit;
+  const team = process.env.AUTH_PASSWORD?.trim();
+  if (team) return `abn-team:${team}`;
   const seed = process.env.AUTH_SEED_PASSWORD?.trim();
   if (seed) return `abn-seed:${seed}`;
   const yahoo = process.env.YAHOO_APP_PASSWORD?.trim();

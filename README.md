@@ -11,11 +11,12 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:43127](http://localhost:43127). You will be asked to sign in before the dashboard, jobs, emails, and the rest of the portal.
+Open [http://localhost:43127](http://localhost:43127). Everyone on the team uses the same login:
 
-If nobody has a login yet, `/login` shows **Create the first administrator** — choose a name, email, and password (at least 8 characters). After that, sign in with those details.
+- **Username:** `abn`
+- **Password:** `ABN-Operations-29`
 
-Local Charlie can also be seeded from `.env.local` with `AUTH_SEED_EMAIL` / `AUTH_SEED_PASSWORD`. Extra people can be added from **Settings → People / Logins**; those accounts are written to gitignored `data/operators.json`.
+Change that pair with `AUTH_USERNAME` and `AUTH_PASSWORD` in `.env.local` or on Vercel if you need to.
 
 ## Production (operations.abnmaintenance.co.uk)
 
@@ -39,14 +40,9 @@ npx vercel --prod --yes
 ```bash
 YAHOO_EMAIL
 YAHOO_APP_PASSWORD
-AUTH_SECRET
-AUTH_SEED_NAME=Charlie
-AUTH_SEED_EMAIL=charlie@abnmaintenance.co.uk
-AUTH_SEED_ROLE=Administrator
-AUTH_SEED_PASSWORD
 ```
 
-`AUTH_SECRET` must be a long random string (`openssl rand -hex 32`). Login users are **not** in git — configure Charlie with `AUTH_SEED_PASSWORD`, and any other operators with `AUTH_OPERATORS` JSON (name, email, role, password). Extra people added in Settings are stored on local disk only and will not persist on Vercel.
+Login does not need extra AUTH keys. The team username and password are built in (`abn` / `ABN-Operations-29`). Optional overrides: `AUTH_USERNAME`, `AUTH_PASSWORD`, `AUTH_SECRET`.
 
 Optional: `YAHOO_IMAP_HOST` (default `imap.mail.yahoo.com`), `YAHOO_IMAP_PORT` (default `993`). Copy mailbox values from local `.env.local`. Preview deployments need the same vars if you want the live mailbox there too.
 
@@ -80,8 +76,7 @@ After DNS updates, Vercel issues HTTPS automatically. Until those records change
 
 ## What you can do
 
-- Sign in as an operator (Charlie is the seeded Administrator)
-- Add more people from Settings (name, email, role, password)
+- Sign in with the shared team username and password
 - Review P1, Open, Completed, and TT Contacted job counts on the dashboard
 - Raise a test job or a full works order
 - Filter jobs by P1, Open, TT Contacted, or Completed, then update those flags and add notes
@@ -92,17 +87,17 @@ After DNS updates, Vercel issues HTTPS automatically. Until those records change
 
 Jobs are parsed from the connected mailbox (jobsheets and repair reports). Local status changes and notes stay in this browser. Use **Settings → Clear local notes and status changes** to drop those edits and re-sync from mail.
 
-## Operator logins
+## Team login
 
-The portal uses a signed httpOnly session cookie (not OAuth). Passwords are hashed with scrypt. Do not put passwords in git.
+The portal uses a signed httpOnly session cookie. Everyone shares one username and password:
+
+- Username: `abn`
+- Password: `ABN-Operations-29`
 
 | Variable | Purpose |
 | --- | --- |
-| `AUTH_SECRET` | Signs the session cookie. Optional; the app falls back if it is missing. |
-| `AUTH_SEED_NAME` / `AUTH_SEED_EMAIL` / `AUTH_SEED_ROLE` / `AUTH_SEED_PASSWORD` | Optional seed for Charlie (or another first administrator). |
-| `AUTH_OPERATORS` | Optional JSON array of extra people for Vercel / production. |
-
-If those seed variables are not set, the first person to open `/login` can create the administrator there. On a writable disk, **Settings → People / Logins** can add more operators to `data/operators.json` (gitignored). On Vercel, prefer `AUTH_SEED_PASSWORD` so the login survives across browsers; the first-admin form still works as a bootstrap.
+| `AUTH_USERNAME` / `AUTH_PASSWORD` | Optional. Override the team login. |
+| `AUTH_SECRET` | Optional. Signs the session cookie. The app falls back if it is missing. |
 
 ## Yahoo inbox (IMAP)
 

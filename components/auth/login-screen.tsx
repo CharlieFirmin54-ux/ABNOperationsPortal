@@ -11,11 +11,7 @@ import { safeInternalPath } from "@/lib/auth/paths";
 
 type MeResponse = {
   operator: { id: string } | null;
-  configured: boolean;
-  secretConfigured: boolean;
-  configError: string | null;
-  canSetup?: boolean;
-  suggestedEmail?: string;
+  suggestedUsername?: string;
 };
 
 export function LoginScreen() {
@@ -53,16 +49,13 @@ function LoginForm() {
   const from = safeInternalPath(searchParams.get("from"));
   const signedOut = searchParams.get("reason") === "signed-out";
 
-  const [email, setEmail] = useState("charlie@abnmaintenance.co.uk");
+  const [username, setUsername] = useState("abn");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [fullName, setFullName] = useState("Charlie");
   const [error, setError] = useState("");
   const [info, setInfo] = useState(
     signedOut ? "You have been signed out." : ""
   );
   const [submitting, setSubmitting] = useState(false);
-  const [canSetup, setCanSetup] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -75,16 +68,8 @@ function LoginForm() {
           router.replace(from);
           return;
         }
-        const setup = Boolean(data.canSetup) || !data.configured;
-        setCanSetup(setup);
-        if (data.suggestedEmail) {
-          setEmail(data.suggestedEmail);
-        }
-        if (data.configError) setError(data.configError);
-        else if (setup) {
-          setInfo(
-            "Nobody has a login on this server yet. Create the first administrator here, then you can open the portal."
-          );
+        if (data.suggestedUsername) {
+          setUsername(data.suggestedUsername);
         }
         setReady(true);
       })
@@ -105,46 +90,20 @@ function LoginForm() {
     setInfo("");
     setSubmitting(true);
     try {
-      if (canSetup) {
-        if (password !== confirmPassword) {
-          setError("Those passwords do not match.");
-          return;
-        }
-        const response = await fetch("/api/auth/setup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: fullName,
-            email,
-            password,
-            confirmPassword,
-          }),
-        });
-        const data = (await response.json()) as { error?: string };
-        if (!response.ok) {
-          setError(data.error || "Could not create the first administrator.");
-          return;
-        }
-      } else {
-        const response = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-        const data = (await response.json()) as { error?: string };
-        if (!response.ok) {
-          setError(data.error || "Could not sign in.");
-          return;
-        }
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setError(data.error || "Could not sign in.");
+        return;
       }
       router.replace(from);
       router.refresh();
     } catch {
-      setError(
-        canSetup
-          ? "Could not create the first administrator. Try again."
-          : "Could not sign in. Try again."
-      );
+      setError("Could not sign in. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -174,33 +133,17 @@ function LoginForm() {
               className="space-y-4"
               onSubmit={(event) => void handleSubmit(event)}
             >
-              {canSetup ? (
-                <div className="space-y-1.5">
-                  <Label htmlFor="name" className="text-zinc-300">
-                    Full name
-                  </Label>
-                  <Input
-                    id="name"
-                    autoComplete="name"
-                    value={fullName}
-                    onChange={(event) => setFullName(event.target.value)}
-                    className="h-10 rounded-xl border-white/10 bg-[#161616] text-white"
-                    disabled={submitting}
-                    required
-                  />
-                </div>
-              ) : null}
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-zinc-300">
-                  Email
+                <Label htmlFor="username" className="text-zinc-300">
+                  Username
                 </Label>
                 <Input
-                  id="email"
-                  type="email"
+                  id="username"
+                  type="text"
                   autoComplete="username"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="charlie@abnmaintenance.co.uk"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder="abn"
                   className="h-10 rounded-xl border-white/10 bg-[#161616] text-white placeholder:text-zinc-600"
                   disabled={submitting}
                   required
@@ -208,56 +151,33 @@ function LoginForm() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="password" className="text-zinc-300">
-                  {canSetup ? "Choose a password" : "Password"}
+                  Password
                 </Label>
                 <Input
                   id="password"
                   type="password"
-                  autoComplete={canSetup ? "new-password" : "current-password"}
+                  autoComplete="current-password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   className="h-10 rounded-xl border-white/10 bg-[#161616] text-white"
                   disabled={submitting}
                   required
-                  minLength={canSetup ? 8 : undefined}
                 />
               </div>
-              {canSetup ? (
-                <div className="space-y-1.5">
-                  <Label htmlFor="confirm-password" className="text-zinc-300">
-                    Confirm password
-                  </Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                    className="h-10 rounded-xl border-white/10 bg-[#161616] text-white"
-                    disabled={submitting}
-                    required
-                    minLength={8}
-                  />
-                </div>
-              ) : null}
               <Button
                 type="submit"
                 className="h-10 w-full rounded-xl bg-[#e11d2e] text-white hover:bg-[#c41626]"
                 disabled={submitting}
               >
-                {submitting ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : null}
-                {canSetup ? "Create administrator and enter" : "Sign in"}
+                {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
+                Sign in
               </Button>
             </form>
           </>
         )}
       </div>
       <p className="mt-4 text-center text-xs text-zinc-600">
-        {canSetup
-          ? "This creates the first administrator for this server. Use the same email and password next time you sign in."
-          : "Signed-in operators can open jobs, emails, and settings."}
+        Everyone on the team uses the same username and password.
       </p>
     </LoginShell>
   );
