@@ -13,7 +13,9 @@ npm run dev
 
 Open [http://localhost:43127](http://localhost:43127). You will be asked to sign in before the dashboard, jobs, emails, and the rest of the portal.
 
-Local Charlie (Administrator) is seeded from `.env.local` — email `charlie@abnmaintenance.co.uk`. Set `AUTH_SEED_PASSWORD` there (never commit it). Extra people can be added from **Settings → People / Logins**; those accounts are written to gitignored `data/operators.json`.
+If nobody has a login yet, `/login` shows **Create the first administrator** — choose a name, email, and password (at least 8 characters). After that, sign in with those details.
+
+Local Charlie can also be seeded from `.env.local` with `AUTH_SEED_EMAIL` / `AUTH_SEED_PASSWORD`. Extra people can be added from **Settings → People / Logins**; those accounts are written to gitignored `data/operators.json`.
 
 ## Production (operations.abnmaintenance.co.uk)
 
@@ -96,11 +98,11 @@ The portal uses a signed httpOnly session cookie (not OAuth). Passwords are hash
 
 | Variable | Purpose |
 | --- | --- |
-| `AUTH_SECRET` | Signs the session cookie. Required. |
-| `AUTH_SEED_NAME` / `AUTH_SEED_EMAIL` / `AUTH_SEED_ROLE` / `AUTH_SEED_PASSWORD` | Seeds Charlie (or another first administrator). |
+| `AUTH_SECRET` | Signs the session cookie. Optional; the app falls back if it is missing. |
+| `AUTH_SEED_NAME` / `AUTH_SEED_EMAIL` / `AUTH_SEED_ROLE` / `AUTH_SEED_PASSWORD` | Optional seed for Charlie (or another first administrator). |
 | `AUTH_OPERATORS` | Optional JSON array of extra people for Vercel / production. |
 
-On a machine with a writable disk, **Settings → People / Logins** can add more operators to `data/operators.json` (gitignored). On Vercel, add people with env vars instead.
+If those seed variables are not set, the first person to open `/login` can create the administrator there. On a writable disk, **Settings → People / Logins** can add more operators to `data/operators.json` (gitignored). On Vercel, prefer `AUTH_SEED_PASSWORD` so the login survives across browsers; the first-admin form still works as a bootstrap.
 
 ## Yahoo inbox (IMAP)
 

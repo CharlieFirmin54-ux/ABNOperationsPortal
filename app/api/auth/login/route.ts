@@ -4,7 +4,6 @@ import { authenticateOperator, countOperators } from "@/lib/auth/operators";
 import {
   SESSION_COOKIE,
   createSessionToken,
-  getAuthSecret,
   sessionCookieOptions,
 } from "@/lib/auth/session";
 
@@ -12,16 +11,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  if (!getAuthSecret()) {
-    return NextResponse.json(
-      {
-        error:
-          "Logins are not configured. Set AUTH_SECRET in the environment.",
-      },
-      { status: 503 }
-    );
-  }
-
   let body: unknown;
   try {
     body = await request.json();
@@ -51,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "No operator logins have been set up. Add AUTH_SEED_PASSWORD for Charlie, or AUTH_OPERATORS.",
+          "No operator logins yet. Create the first administrator on this page.",
         configured: false,
       },
       { status: 403 }
