@@ -49,7 +49,7 @@ function LoginForm() {
   const from = safeInternalPath(searchParams.get("from"));
   const signedOut = searchParams.get("reason") === "signed-out";
 
-  const [username, setUsername] = useState("abn");
+  const [username, setUsername] = useState("ABN2026");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [info, setInfo] = useState(
@@ -143,7 +143,7 @@ function LoginForm() {
                   autoComplete="username"
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
-                  placeholder="abn"
+                  placeholder="ABN2026"
                   className="h-10 rounded-xl border-white/10 bg-[#161616] text-white placeholder:text-zinc-600"
                   disabled={submitting}
                   required

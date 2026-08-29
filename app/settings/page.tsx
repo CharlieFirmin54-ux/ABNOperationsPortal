@@ -34,7 +34,7 @@ export default function SettingsPage() {
         <h3 className="text-sm font-medium text-white">Team login</h3>
         <p className="mt-2 max-w-2xl text-sm text-zinc-500">
           Everyone signs in with the same username and password. The default is
-          username <code className="text-zinc-400">abn</code>. Change it with{" "}
+          username <code className="text-zinc-400">ABN2026</code>. Change it with{" "}
           <code className="text-zinc-400">AUTH_USERNAME</code> and{" "}
           <code className="text-zinc-400">AUTH_PASSWORD</code> if you need a
           different pair.

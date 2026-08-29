@@ -50,6 +50,30 @@ const FILE_PATH = path.join(process.cwd(), "data", "operators.json");
 
 let envCache: { key: string; operators: StoredOperator[] } | null = null;
 
+function isVercelRuntime(): boolean {
+  return Boolean(process.env.VERCEL);
+}
+
+function isUnwritableDiskError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException).code;
+  if (
+    code === "EROFS" ||
+    code === "EACCES" ||
+    code === "EPERM" ||
+    code === "ENOENT"
+  ) {
+    return true;
+  }
+  // Serverless hosts can fail mkdir/write with unexpected codes.
+  return isVercelRuntime();
+}
+
+const DISK_LOGIN_UNAVAILABLE = {
+  error:
+    "This host cannot save logins to disk. Add people with AUTH_OPERATORS or AUTH_SEED_PASSWORD in the environment.",
+  status: 503,
+} as const;
+
 export function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -209,6 +233,13 @@ async function readFileOperators(): Promise<StoredOperator[]> {
 }
 
 async function writeFileOperators(operators: StoredOperator[]): Promise<void> {
+  if (isVercelRuntime()) {
+    const error = new Error(
+      "Cannot write operator file on Vercel."
+    ) as NodeJS.ErrnoException;
+    error.code = "EROFS";
+    throw error;
+  }
   await mkdir(path.dirname(FILE_PATH), { recursive: true });
   const payload: FileShape = {
     operators: operators.map((operator) => ({
@@ -357,16 +388,20 @@ export async function createFileOperator(input: {
     source: "file",
     createdAt: new Date().toISOString(),
   };
+  if (isVercelRuntime()) {
+    return {
+      error: DISK_LOGIN_UNAVAILABLE.error,
+      status: DISK_LOGIN_UNAVAILABLE.status,
+    };
+  }
   const fileOperators = await readFileOperators();
   try {
     await writeFileOperators([...fileOperators, record]);
   } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === "EROFS" || code === "EACCES" || code === "EPERM") {
+    if (isUnwritableDiskError(error)) {
       return {
-        error:
-          "This host cannot save logins to disk. Add people with AUTH_OPERATORS or AUTH_SEED_PASSWORD in the environment.",
-        status: 503,
+        error: DISK_LOGIN_UNAVAILABLE.error,
+        status: DISK_LOGIN_UNAVAILABLE.status,
       };
     }
     throw error;
@@ -445,14 +480,19 @@ export async function deleteFileOperator(
       return { error: "Keep at least one administrator.", status: 400 };
     }
   }
+  if (isVercelRuntime()) {
+    return {
+      error: "This host cannot change saved logins on disk.",
+      status: 503,
+    };
+  }
   const remaining = (await readFileOperators()).filter(
     (operator) => operator.id !== id
   );
   try {
     await writeFileOperators(remaining);
   } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === "EROFS" || code === "EACCES" || code === "EPERM") {
+    if (isUnwritableDiskError(error)) {
       return {
         error: "This host cannot change saved logins on disk.",
         status: 503,
