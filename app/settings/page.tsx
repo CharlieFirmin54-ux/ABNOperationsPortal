@@ -33,11 +33,10 @@ export default function SettingsPage() {
       <section className="rounded-xl border border-white/8 bg-[#0c0c0c] p-5">
         <h3 className="text-sm font-medium text-white">Team login</h3>
         <p className="mt-2 max-w-2xl text-sm text-zinc-500">
-          Everyone signs in with the same username and password. The default is
-          username <code className="text-zinc-400">ABN2026</code>. Change it with{" "}
+          Everyone signs in with the same username and password from{" "}
           <code className="text-zinc-400">AUTH_USERNAME</code> and{" "}
-          <code className="text-zinc-400">AUTH_PASSWORD</code> if you need a
-          different pair.
+          <code className="text-zinc-400">AUTH_PASSWORD</code>. Sessions are
+          signed with <code className="text-zinc-400">AUTH_SECRET</code>.
         </p>
       </section>
 

@@ -5,34 +5,43 @@ import { isOperatorRole } from "@/lib/auth/types";
 export const SESSION_COOKIE = "abn_ops_session";
 export const PEOPLE_COOKIE = "abn_ops_people";
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+const MIN_PRODUCTION_SECRET_LENGTH = 32;
 
 type TokenPayload = SessionOperator & { exp: number };
 
-export function getAuthSecret(): string {
-  const explicit = process.env.AUTH_SECRET?.trim();
+function isProductionRuntime(): boolean {
+  return process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+}
+
+export function getAuthSecret(): string | null {
+  const explicit = process.env.AUTH_SECRET?.trim() ?? "";
+  if (isProductionRuntime()) {
+    return explicit.length >= MIN_PRODUCTION_SECRET_LENGTH ? explicit : null;
+  }
   if (explicit) return explicit;
-  const team = process.env.AUTH_PASSWORD?.trim();
-  if (team) return `abn-team:${team}`;
-  const seed = process.env.AUTH_SEED_PASSWORD?.trim();
-  if (seed) return `abn-seed:${seed}`;
-  const yahoo = process.env.YAHOO_APP_PASSWORD?.trim();
-  if (yahoo) return `abn-yahoo:${yahoo}`;
-  // Stay stable across deploys so a first-admin cookie still verifies.
-  return "abn-ops-local-secret";
+  return "abn-ops-local-dev-secret";
+}
+
+function requireAuthSecret(): string {
+  const secret = getAuthSecret();
+  if (!secret) {
+    throw new Error("AUTH_SECRET is required.");
+  }
+  return secret;
 }
 
 export function sessionCookieOptions(maxAge = SESSION_MAX_AGE_SECONDS) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: isProductionRuntime(),
     path: "/",
     maxAge,
   };
 }
 
 export function createSessionToken(operator: SessionOperator): string {
-  const secret = getAuthSecret();
+  const secret = requireAuthSecret();
   const payload: TokenPayload = {
     ...operator,
     exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SECONDS,
@@ -47,6 +56,7 @@ export function verifySessionToken(
 ): SessionOperator | null {
   if (!token) return null;
   const secret = getAuthSecret();
+  if (!secret) return null;
   const dot = token.lastIndexOf(".");
   if (dot <= 0) return null;
   const body = token.slice(0, dot);
@@ -84,7 +94,7 @@ export function verifySessionToken(
 }
 
 export function signPayload(value: string): string {
-  const secret = getAuthSecret();
+  const secret = requireAuthSecret();
   const body = Buffer.from(value, "utf8").toString("base64url");
   const sig = createHmac("sha256", secret).update(body).digest("base64url");
   return `${body}.${sig}`;
@@ -93,6 +103,7 @@ export function signPayload(value: string): string {
 export function unsignPayload(token: string | undefined | null): string | null {
   if (!token) return null;
   const secret = getAuthSecret();
+  if (!secret) return null;
   const dot = token.lastIndexOf(".");
   if (dot <= 0) return null;
   const body = token.slice(0, dot);
@@ -109,4 +120,3 @@ export function unsignPayload(token: string | undefined | null): string | null {
     return null;
   }
 }
-

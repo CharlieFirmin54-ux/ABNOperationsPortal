@@ -21,9 +21,7 @@ export async function DELETE(
       return NextResponse.json({ error: result.error }, { status: result.status });
     }
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Could not remove that login.";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Could not remove that login." }, { status: 500 });
   }
 }
