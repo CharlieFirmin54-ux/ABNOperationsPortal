@@ -2,7 +2,6 @@
 
 import { YahooMailboxLink } from "@/components/emails/yahoo-mailbox-link";
 import { useAuth } from "@/components/layout/auth-provider";
-import { PeoplePanel } from "@/components/settings/people-panel";
 import { Button } from "@/components/ui/button";
 import { useOperations } from "@/lib/store";
 
@@ -17,8 +16,7 @@ export default function SettingsPage() {
           Settings
         </h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Operator profile, people logins, and mailbox sync for the ABN
-          operations portal.
+          Team profile and mailbox sync for the ABN operations portal.
         </p>
       </div>
 
@@ -27,12 +25,21 @@ export default function SettingsPage() {
         <dl className="mt-4 grid gap-4 sm:grid-cols-2">
           <Item label="Name" value={operator?.name ?? "—"} />
           <Item label="Role" value={operator?.role ?? "—"} />
-          <Item label="Email" value={operator?.email ?? "—"} />
+          <Item label="Username" value={operator?.email ?? "—"} />
           <Item label="Company" value="ABN Property Maintenance" />
         </dl>
       </section>
 
-      <PeoplePanel />
+      <section className="rounded-xl border border-white/8 bg-[#0c0c0c] p-5">
+        <h3 className="text-sm font-medium text-white">Team login</h3>
+        <p className="mt-2 max-w-2xl text-sm text-zinc-500">
+          Everyone signs in with the same username and password. The default is
+          username <code className="text-zinc-400">abn</code>. Change it with{" "}
+          <code className="text-zinc-400">AUTH_USERNAME</code> and{" "}
+          <code className="text-zinc-400">AUTH_PASSWORD</code> if you need a
+          different pair.
+        </p>
+      </section>
 
       <section className="rounded-xl border border-white/8 bg-[#0c0c0c] p-5">
         <h3 className="text-sm font-medium text-white">Yahoo mailbox</h3>

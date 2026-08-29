@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { authenticateOperator, countOperators } from "@/lib/auth/operators";
+import { authenticateOperator } from "@/lib/auth/operators";
+import { authenticateSharedLogin } from "@/lib/auth/shared-login";
 import {
   SESSION_COOKIE,
   createSessionToken,
@@ -15,50 +16,39 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Send email and password." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Send username and password." },
+      { status: 400 }
+    );
   }
   const record = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
-  const email = typeof record.email === "string" ? record.email.trim() : "";
+  const usernameRaw =
+    (typeof record.username === "string" && record.username) ||
+    (typeof record.email === "string" && record.email) ||
+    "";
+  const username = usernameRaw.trim();
   const password = typeof record.password === "string" ? record.password : "";
-  if (!email || !password) {
+  if (!username || !password) {
     return NextResponse.json(
-      { error: "Enter your email and password." },
+      { error: "Enter the team username and password." },
       { status: 400 }
     );
   }
 
-  let configured = 0;
-  try {
-    configured = await countOperators();
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Could not load operator logins.";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-
-  if (configured === 0) {
-    return NextResponse.json(
-      {
-        error:
-          "No operator logins yet. Create the first administrator on this page.",
-        configured: false,
-      },
-      { status: 403 }
-    );
-  }
-
-  let operator;
-  try {
-    operator = await authenticateOperator(email, password);
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Could not check that login.";
-    return NextResponse.json({ error: message }, { status: 500 });
+  let operator = authenticateSharedLogin(username, password);
+  if (!operator) {
+    try {
+      operator = await authenticateOperator(username, password);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not check that login.";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
   }
 
   if (!operator) {
     return NextResponse.json(
-      { error: "That email or password is not right." },
+      { error: "That username or password is not right." },
       { status: 401 }
     );
   }
