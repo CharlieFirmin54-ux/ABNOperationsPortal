@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Open [http://127.0.0.1:43127](http://127.0.0.1:43127). The dev server listens on port 43127.
+Open [http://localhost:43127](http://localhost:43127).
 
 ## What you can do
 
