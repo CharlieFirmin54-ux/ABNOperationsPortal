@@ -22,7 +22,7 @@ const JOB_FILTERS: JobListFilter[] = [
 ];
 
 export default function JobsPage() {
-  const { jobs, hydrated, source } = useOperations();
+  const { jobs, hydrated, source, syncing } = useOperations();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [flag, setFlag] = useState<JobListFilter>("All");
@@ -85,9 +85,11 @@ export default function JobsPage() {
           <JobsTable
             jobs={filtered}
             emptyMessage={
-              source === "yahoo"
-                ? "No jobs match those filters. Clear the search or raise a new job."
-                : "No jobs yet. Connect the Yahoo mailbox to import jobsheets."
+              syncing && jobs.length === 0
+                ? "Syncing jobs from the Yahoo inbox…"
+                : source === "yahoo"
+                  ? "No jobs match those filters. Clear the search or raise a new job."
+                  : "No jobs yet. Connect the Yahoo mailbox to import jobsheets."
             }
           />
         )}

@@ -138,9 +138,11 @@ export default function DashboardPage() {
         <JobsTable
           jobs={recent}
           emptyMessage={
-            source === "yahoo"
-              ? "No maintenance jobs were found in the latest mailbox sync."
-              : "No jobs yet. Connect the Yahoo mailbox, then refresh."
+            syncing && jobs.length === 0
+              ? "Syncing jobs from the Yahoo inbox…"
+              : source === "yahoo"
+                ? "No maintenance jobs were found in the latest mailbox sync."
+                : "No jobs yet. Connect the Yahoo mailbox, then refresh."
           }
         />
       </section>
