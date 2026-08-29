@@ -11,6 +11,10 @@ const statusClass: Record<JobStatus, string> = {
   Completed: "border-transparent bg-emerald-600 text-white",
 };
 
+/** UK earth-cable yellow → green, left to right. */
+export const electricalCertsPillClass =
+  "border-transparent bg-[linear-gradient(to_right,#F7E017,#1B8A3A)] text-black";
+
 export function PriorityBadge({ value }: { value: Priority }) {
   if (value !== "P1") return null;
   return (
@@ -38,7 +42,7 @@ export function CategoryBadge({ value }: { value: JobCategory }) {
         turnAround
           ? "border-transparent bg-violet-600 text-white"
           : electrical
-            ? "border-transparent bg-amber-500 text-black"
+            ? electricalCertsPillClass
             : "border-white/15 bg-white/8 text-zinc-200"
       )}
     >

@@ -7,6 +7,7 @@ import { JobsTable } from "@/components/jobs/jobs-table";
 import { MailboxNotice } from "@/components/mailbox-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { electricalCertsPillClass } from "@/components/jobs/badges";
 import { ELECTRICAL_CERTS_CATEGORY } from "@/lib/electrical-certs";
 import { HOUSE_TURN_AROUNDS_CATEGORY } from "@/lib/house-turn-arounds";
 import { jobMatchesQuery, useOperations } from "@/lib/store";
@@ -85,6 +86,7 @@ export default function JobsPage() {
             <FilterChip
               key={value}
               active={flag === value}
+              electrical={value === ELECTRICAL_CERTS_CATEGORY}
               onClick={() => setFlag(value)}
             >
               {value === "All" ? "All jobs" : value}
@@ -117,10 +119,12 @@ export default function JobsPage() {
 
 function FilterChip({
   active,
+  electrical,
   onClick,
   children,
 }: {
   active: boolean;
+  electrical?: boolean;
   onClick: () => void;
   children: React.ReactNode;
 }) {
@@ -129,10 +133,12 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-1 text-xs transition-colors",
-        active
-          ? "border-[#e11d2e] bg-[#e11d2e] text-white"
-          : "border-white/10 bg-transparent text-zinc-400 hover:border-white/20 hover:text-white"
+        "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
+        electrical
+          ? cn(electricalCertsPillClass, active && "ring-1 ring-white/40")
+          : active
+            ? "border-[#e11d2e] bg-[#e11d2e] text-white"
+            : "border-white/10 bg-transparent text-zinc-400 hover:border-white/20 hover:text-white"
       )}
     >
       {children}
