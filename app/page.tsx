@@ -6,6 +6,7 @@ import { JobsTable } from "@/components/jobs/jobs-table";
 import { MailboxNotice } from "@/components/mailbox-notice";
 import { Button } from "@/components/ui/button";
 import { isOpenJob } from "@/lib/format";
+import { ELECTRICAL_CERTS_CATEGORY } from "@/lib/electrical-certs";
 import { HOUSE_RENOVATIONS_CATEGORY } from "@/lib/house-renovations";
 import { useOperations } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -27,7 +28,10 @@ export default function DashboardPage() {
     const houseRenovations = jobs.filter(
       (job) => job.category === HOUSE_RENOVATIONS_CATEGORY
     ).length;
-    return { p1, open, completed, ttContacted, houseRenovations };
+    const electricalCerts = jobs.filter(
+      (job) => job.category === ELECTRICAL_CERTS_CATEGORY
+    ).length;
+    return { p1, open, completed, ttContacted, houseRenovations, electricalCerts };
   }, [jobs]);
 
   const recent = useMemo(
@@ -86,8 +90,8 @@ export default function DashboardPage() {
       <MailboxNotice />
 
       {!hydrated || (syncing && jobs.length === 0) ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 5 }).map((_, index) => (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
             <div
               key={index}
               className="h-36 animate-pulse rounded-xl border border-white/8 bg-[#0c0c0c]"
@@ -95,7 +99,7 @@ export default function DashboardPage() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <KpiCard
             label="P1 Jobs"
             value={stats.p1}
@@ -122,6 +126,13 @@ export default function DashboardPage() {
             value={stats.ttContacted}
             description="Jobs where the tenant has been contacted."
             accent="blue"
+            icon={<Circle className="size-3 fill-current" />}
+          />
+          <KpiCard
+            label="Electrical certs"
+            value={stats.electricalCerts}
+            description="EICR and electrical certificate jobs from the mailbox."
+            accent="teal"
             icon={<Circle className="size-3 fill-current" />}
           />
           <KpiCard
@@ -171,7 +182,7 @@ function KpiCard({
   label: string;
   value: number;
   description: string;
-  accent: "red" | "gold" | "green" | "blue" | "violet";
+  accent: "red" | "gold" | "green" | "blue" | "violet" | "teal";
   icon: React.ReactNode;
 }) {
   const styles = {
@@ -194,6 +205,10 @@ function KpiCard({
     violet: {
       card: "border-violet-500/35 shadow-[0_0_28px_rgba(139,92,246,0.12)]",
       icon: "text-violet-400",
+    },
+    teal: {
+      card: "border-teal-500/35 shadow-[0_0_28px_rgba(20,184,166,0.12)]",
+      icon: "text-teal-400",
     },
   }[accent];
 

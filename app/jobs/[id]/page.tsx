@@ -8,9 +8,9 @@ import { CategoryBadge, PriorityBadge, StatusBadge } from "@/components/jobs/bad
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDateTime } from "@/lib/format";
-import { PRIORITIES, STATUSES, useOperations } from "@/lib/store";
-import type { JobStatus, Priority } from "@/lib/types";
+import { formatDateTime, categoryLabel } from "@/lib/format";
+import { CATEGORIES, PRIORITIES, STATUSES, useOperations } from "@/lib/store";
+import type { JobCategory, JobStatus, Priority } from "@/lib/types";
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -85,7 +85,7 @@ export default function JobDetailPage() {
             <Field label="Organisation" value={job.organisation} />
             <Field label="Phone" value={job.tenantPhone} />
             <Field label="Email" value={job.tenantEmail} />
-            <Field label="Category" value={job.category} />
+            <Field label="Category" value={categoryLabel(job.category)} />
             <Field label="Raised" value={formatDateTime(job.createdAt)} />
             <Field label="Last updated" value={formatDateTime(job.updatedAt)} />
             {property && (
@@ -105,7 +105,7 @@ export default function JobDetailPage() {
             )}
           </dl>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <div className="grid gap-2">
               <Label htmlFor="status">Status</Label>
               <select
@@ -138,6 +138,25 @@ export default function JobDetailPage() {
                 {PRIORITIES.map((value) => (
                   <option key={value} value={value}>
                     {value === "P1" ? "P1" : "Normal"}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="category">Category</Label>
+              <select
+                id="category"
+                value={job.category}
+                onChange={(event) =>
+                  updateJob(job.id, {
+                    category: event.target.value as JobCategory,
+                  })
+                }
+                className="h-9 rounded-lg border border-white/10 bg-[#161616] px-3 text-sm text-white"
+              >
+                {CATEGORIES.map((value) => (
+                  <option key={value} value={value}>
+                    {categoryLabel(value)}
                   </option>
                 ))}
               </select>

@@ -1,4 +1,6 @@
 import { Badge } from "@/components/ui/badge";
+import { ELECTRICAL_CERTS_CATEGORY } from "@/lib/electrical-certs";
+import { categoryLabel } from "@/lib/format";
 import { HOUSE_RENOVATIONS_CATEGORY } from "@/lib/house-renovations";
 import type { JobCategory, JobStatus, Priority } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -28,16 +30,19 @@ export function StatusBadge({ value }: { value: JobStatus }) {
 
 export function CategoryBadge({ value }: { value: JobCategory }) {
   const renovation = value === HOUSE_RENOVATIONS_CATEGORY;
+  const electrical = value === ELECTRICAL_CERTS_CATEGORY;
   return (
     <Badge
       className={cn(
         "h-6 rounded-full px-2.5 font-semibold",
         renovation
           ? "border-transparent bg-violet-600 text-white"
-          : "border-white/15 bg-white/8 text-zinc-200"
+          : electrical
+            ? "border-transparent bg-amber-500 text-black"
+            : "border-white/15 bg-white/8 text-zinc-200"
       )}
     >
-      {value}
+      {categoryLabel(value)}
     </Badge>
   );
 }

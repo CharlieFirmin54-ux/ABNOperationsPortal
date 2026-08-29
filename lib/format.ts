@@ -1,4 +1,6 @@
-import type { Job, JobStatus, Priority } from "@/lib/types";
+import { ELECTRICAL_CERTS_CATEGORY } from "@/lib/electrical-certs";
+import { HOUSE_RENOVATIONS_CATEGORY } from "@/lib/house-renovations";
+import type { Job, JobCategory, JobStatus, Priority } from "@/lib/types";
 
 export function formatLongDate(value: Date | string = new Date()) {
   const date = typeof value === "string" ? new Date(value) : value;
@@ -57,6 +59,19 @@ export function normalizeStatus(value: string | undefined | null): JobStatus {
   if (value === "TT Contacted") return "TT Contacted";
   if (value === "Completed" || value === "Cancelled") return "Completed";
   return "Open";
+}
+
+export function normalizeCategory(
+  value: string | undefined | null
+): JobCategory {
+  if (value === HOUSE_RENOVATIONS_CATEGORY) return HOUSE_RENOVATIONS_CATEGORY;
+  if (value === ELECTRICAL_CERTS_CATEGORY) return ELECTRICAL_CERTS_CATEGORY;
+  return "Normal";
+}
+
+export function categoryLabel(value: JobCategory): string {
+  if (value === "Normal") return "Normal job";
+  return value;
 }
 
 export function isOpenJob(job: Job) {

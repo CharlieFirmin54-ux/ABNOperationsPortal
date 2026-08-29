@@ -14,6 +14,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { isElectricalCertText } from "@/lib/electrical-certs";
+import { categoryLabel } from "@/lib/format";
 import { isHouseRenovationText } from "@/lib/house-renovations";
 import { CATEGORIES, PRIORITIES, STATUSES, useOperations } from "@/lib/store";
 import type { JobCategory, JobStatus, Priority } from "@/lib/types";
@@ -31,7 +33,7 @@ export function CreateJobDialog({
   const [tenant, setTenant] = useState("");
   const [priority, setPriority] = useState<Priority>("Normal");
   const [status, setStatus] = useState<JobStatus>("Open");
-  const [category, setCategory] = useState<JobCategory>("Heating");
+  const [category, setCategory] = useState<JobCategory>("Normal");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
 
@@ -165,7 +167,7 @@ export function CreateJobDialog({
             >
               {CATEGORIES.map((value) => (
                 <option key={value} value={value}>
-                  {value}
+                  {categoryLabel(value)}
                 </option>
               ))}
             </select>
@@ -180,6 +182,8 @@ export function CreateJobDialog({
                 setDescription(next);
                 if (isHouseRenovationText(next)) {
                   setCategory("House Renovations");
+                } else if (isElectricalCertText(next)) {
+                  setCategory("Electrical certs");
                 }
               }}
               placeholder="What has failed, and what access is available?"

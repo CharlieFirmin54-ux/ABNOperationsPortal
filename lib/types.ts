@@ -1,12 +1,8 @@
 export type Priority = "P1" | "Normal";
 export type JobStatus = "Open" | "TT Contacted" | "Completed";
 export type JobCategory =
-  | "Heating"
-  | "Plumbing"
-  | "Electrical"
-  | "Damp"
-  | "Carpentry"
-  | "General"
+  | "Normal"
+  | "Electrical certs"
   | "House Renovations";
 
 export type JobOrigin = "mailbox" | "local";

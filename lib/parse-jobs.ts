@@ -1,4 +1,8 @@
 import {
+  ELECTRICAL_CERTS_CATEGORY,
+  isElectricalCertText,
+} from "@/lib/electrical-certs";
+import {
   HOUSE_RENOVATIONS_CATEGORY,
   isHouseRenovationText,
 } from "@/lib/house-renovations";
@@ -132,7 +136,8 @@ export function isJobRelatedEmail(email: InboxEmail): boolean {
   return (
     JOB_POSITIVE.test(haystack) ||
     SUBJECT_JOBSHEET_RE.test(email.subject) ||
-    isHouseRenovationText(email.subject, email.body)
+    isHouseRenovationText(email.subject, email.body) ||
+    isElectricalCertText(email.subject, email.body)
   );
 }
 
@@ -308,30 +313,10 @@ function parseCategory(
   if (isHouseRenovationText(subject, title, description, body)) {
     return HOUSE_RENOVATIONS_CATEGORY;
   }
-  const titleText = title.toLowerCase();
-  const fromTitle = categoryFromText(titleText);
-  if (fromTitle) return fromTitle;
-  if (/\bbird\b/.test(titleText)) {
-    return "General";
+  if (isElectricalCertText(subject, title, description, body)) {
+    return ELECTRICAL_CERTS_CATEGORY;
   }
-  return categoryFromText(description.toLowerCase()) ?? "General";
-}
-
-function categoryFromText(haystack: string): JobCategory | null {
-  if (/\b(mould|damp|condensation)\b/.test(haystack)) return "Damp";
-  if (/\b(heat|boiler|radiator|hot water|heating|thermostat)\b/.test(haystack)) {
-    return "Heating";
-  }
-  if (/\belectric|\b(eicr|socket|outlet|consumer unit|alarm|cmd|extractor)\b/.test(haystack)) {
-    return "Electrical";
-  }
-  if (/\b(leak|toilet|tap|plumb|sink|cistern)\b/.test(haystack)) {
-    return "Plumbing";
-  }
-  if (/\b(door|hinge|window|carpentry|lock|handle|wardrobe)\b/.test(haystack)) {
-    return "Carpentry";
-  }
-  return null;
+  return "Normal";
 }
 
 function slugify(value: string): string {
@@ -397,7 +382,7 @@ function parseJobFromEmail(email: InboxEmail): Job | null {
   };
 }
 
-function preferHouseRenovations(
+function preferSpecialCategory(
   primary: JobCategory,
   secondary?: JobCategory
 ): JobCategory {
@@ -406,6 +391,12 @@ function preferHouseRenovations(
     secondary === HOUSE_RENOVATIONS_CATEGORY
   ) {
     return HOUSE_RENOVATIONS_CATEGORY;
+  }
+  if (
+    primary === ELECTRICAL_CERTS_CATEGORY ||
+    secondary === ELECTRICAL_CERTS_CATEGORY
+  ) {
+    return ELECTRICAL_CERTS_CATEGORY;
   }
   return primary;
 }
@@ -477,22 +468,25 @@ export function buildMailboxFromEmails(emails: InboxEmail[]): MailboxBuild {
     if (!existing || scoreJob(job) > scoreJob(existing)) {
       byKey.set(job.jobNo, {
         ...job,
-        category: preferHouseRenovations(job.category, existing?.category),
+        category: preferSpecialCategory(job.category, existing?.category),
       });
     } else if (new Date(job.updatedAt) > new Date(existing.updatedAt)) {
       byKey.set(job.jobNo, {
         ...existing,
         updatedAt: job.updatedAt,
-        category: preferHouseRenovations(existing.category, job.category),
+        category: preferSpecialCategory(existing.category, job.category),
         description:
           job.description.length > existing.description.length
             ? job.description
             : existing.description,
       });
-    } else if (job.category === HOUSE_RENOVATIONS_CATEGORY) {
+    } else if (
+      job.category === HOUSE_RENOVATIONS_CATEGORY ||
+      job.category === ELECTRICAL_CERTS_CATEGORY
+    ) {
       byKey.set(job.jobNo, {
         ...existing,
-        category: HOUSE_RENOVATIONS_CATEGORY,
+        category: preferSpecialCategory(existing.category, job.category),
       });
     }
   }

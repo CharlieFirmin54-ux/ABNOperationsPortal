@@ -8,10 +8,16 @@ import {
   useMemo,
   useState,
 } from "react";
-import { nextJobNumber, normalizePriority, normalizeStatus } from "@/lib/format";
+import { ELECTRICAL_CERTS_CATEGORY, isElectricalCertText } from "@/lib/electrical-certs";
+import {
+  nextJobNumber,
+  normalizeCategory,
+  normalizePriority,
+  normalizeStatus,
+} from "@/lib/format";
 import {
   HOUSE_RENOVATIONS_CATEGORY,
-  resolveJobCategory,
+  isHouseRenovationText,
 } from "@/lib/house-renovations";
 import type {
   InboxEmail,
@@ -28,7 +34,7 @@ import type {
 
 const STORAGE_KEY = "abn-ops-store-v2";
 
-type JobPatch = Partial<Pick<Job, "status" | "priority">>;
+type JobPatch = Partial<Pick<Job, "status" | "priority" | "category">>;
 
 type StoreState = {
   jobs: Job[];
@@ -112,13 +118,14 @@ function propertiesFromJobs(jobs: Job[], extras: Property[] = []): Property[] {
   return [...map.values()].sort((a, b) => a.address.localeCompare(b.address));
 }
 
-function classifyJob<T extends { priority?: string; status?: string }>(
+function classifyJob<T extends { priority?: string; status?: string; category?: string }>(
   job: T
-): T & { priority: Priority; status: JobStatus } {
+): T & { priority: Priority; status: JobStatus; category: JobCategory } {
   return {
     ...job,
     priority: normalizePriority(job.priority),
     status: normalizeStatus(job.status),
+    category: normalizeCategory(job.category),
   };
 }
 
@@ -126,7 +133,17 @@ function classifyPatch(patch: JobPatch): JobPatch {
   const next: JobPatch = { ...patch };
   if (patch.priority) next.priority = normalizePriority(patch.priority);
   if (patch.status) next.status = normalizeStatus(patch.status);
+  if (patch.category) next.category = normalizeCategory(patch.category);
   return next;
+}
+
+function resolveCreatedCategory(
+  fallback: JobCategory,
+  description: string
+): JobCategory {
+  if (isHouseRenovationText(description)) return HOUSE_RENOVATIONS_CATEGORY;
+  if (isElectricalCertText(description)) return ELECTRICAL_CERTS_CATEGORY;
+  return normalizeCategory(fallback);
 }
 
 function applyPatches(jobs: Job[], patches: Record<string, JobPatch>): Job[] {
@@ -285,7 +302,7 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
       organisation,
       priority: normalizePriority(input.priority),
       status: normalizeStatus(input.status ?? "Open"),
-      category: resolveJobCategory(input.category, input.description),
+      category: resolveCreatedCategory(input.category, input.description),
       description: input.description.trim(),
       propertyId,
       createdAt: now,
@@ -322,7 +339,7 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
         propertyId: property?.id || "prop-unassigned",
         priority: "P1",
         status: "Open",
-        category: "General",
+        category: "Normal",
         description:
           "Test job created from the operations dashboard. Confirm the fault and access on arrival.",
       },
@@ -464,11 +481,7 @@ export const STATUSES: JobStatus[] = ["Open", "TT Contacted", "Completed"];
 
 export const PRIORITIES: Priority[] = ["P1", "Normal"];
 export const CATEGORIES: JobCategory[] = [
-  "Heating",
-  "Plumbing",
-  "Electrical",
-  "Damp",
-  "Carpentry",
-  "General",
+  "Normal",
+  ELECTRICAL_CERTS_CATEGORY,
   HOUSE_RENOVATIONS_CATEGORY,
 ];

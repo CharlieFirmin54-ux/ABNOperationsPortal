@@ -7,12 +7,18 @@ import { JobsTable } from "@/components/jobs/jobs-table";
 import { MailboxNotice } from "@/components/mailbox-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ELECTRICAL_CERTS_CATEGORY } from "@/lib/electrical-certs";
 import { HOUSE_RENOVATIONS_CATEGORY } from "@/lib/house-renovations";
 import { jobMatchesQuery, useOperations } from "@/lib/store";
 import type { JobStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type JobListFilter = "All" | "P1" | JobStatus | typeof HOUSE_RENOVATIONS_CATEGORY;
+type JobListFilter =
+  | "All"
+  | "P1"
+  | JobStatus
+  | typeof ELECTRICAL_CERTS_CATEGORY
+  | typeof HOUSE_RENOVATIONS_CATEGORY;
 
 const JOB_FILTERS: JobListFilter[] = [
   "All",
@@ -20,6 +26,7 @@ const JOB_FILTERS: JobListFilter[] = [
   "Open",
   "TT Contacted",
   "Completed",
+  ELECTRICAL_CERTS_CATEGORY,
   HOUSE_RENOVATIONS_CATEGORY,
 ];
 
@@ -34,6 +41,9 @@ export default function JobsPage() {
       if (!jobMatchesQuery(job, query)) return false;
       if (flag === "All") return true;
       if (flag === "P1") return job.priority === "P1";
+      if (flag === ELECTRICAL_CERTS_CATEGORY) {
+        return job.category === ELECTRICAL_CERTS_CATEGORY;
+      }
       if (flag === HOUSE_RENOVATIONS_CATEGORY) {
         return job.category === HOUSE_RENOVATIONS_CATEGORY;
       }
