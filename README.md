@@ -13,6 +13,30 @@ npm run dev
 
 Open [http://localhost:43127](http://localhost:43127).
 
+## Production
+
+Production hostname: **[operations.abnmaintenance.co.uk](https://operations.abnmaintenance.co.uk)**
+
+IMAP credentials (`YAHOO_EMAIL`, `YAHOO_APP_PASSWORD`) must be set as Vercel project environment variables for Production (and Preview if you want mailbox data on preview deploys). Do not commit `.env.local`.
+
+### DNS (IONOS)
+
+The zone uses IONOS nameservers (`ns1116.ui-dns.org`, `ns1048.ui-dns.com`, `ns1056.ui-dns.de`, `ns1053.ui-dns.biz`). DNS cannot be changed from this repo. In the IONOS DNS panel for `abnmaintenance.co.uk`, replace the current `operations` A record (`217.160.0.70`) with:
+
+| Type | Host / Name | Value | TTL |
+| --- | --- | --- | --- |
+| CNAME | `operations` | `cname.vercel-dns-0.com` | 3600 (or default) |
+
+If IONOS refuses a CNAME because an A/AAAA already exists, delete the `operations` A and AAAA records first, then add the CNAME. Do not change the apex `abnmaintenance.co.uk` A record (marketing site).
+
+Fallback if a CNAME is not accepted:
+
+| Type | Host / Name | Value |
+| --- | --- | --- |
+| A | `operations` | `76.76.21.21` |
+
+After DNS updates, HTTPS should be issued automatically by Vercel. Keep the local preview on [http://localhost:43127](http://localhost:43127).
+
 ## What you can do
 
 - Review P1, Open, Completed, and TT Contacted job counts on the dashboard
