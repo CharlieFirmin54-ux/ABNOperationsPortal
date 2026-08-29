@@ -198,8 +198,9 @@ export async function fetchYahooInbox(
     await client.connect();
     const lock = await client.getMailboxLock("INBOX");
     try {
-      const exists = client.mailbox?.exists ?? 0;
-      if (exists === 0) return [];
+      const mailbox = client.mailbox;
+      const exists = mailbox ? mailbox.exists : 0;
+      if (!mailbox || exists === 0) return [];
 
       const start = Math.max(1, exists - Math.max(1, limit) + 1);
       const emails: InboxEmail[] = [];

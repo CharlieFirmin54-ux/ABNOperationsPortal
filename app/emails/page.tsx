@@ -35,7 +35,10 @@ export default function EmailsPage() {
   }, []);
 
   useEffect(() => {
-    void loadInbox();
+    const frame = window.requestAnimationFrame(() => {
+      void loadInbox();
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [loadInbox]);
 
   const live = inbox?.source === "yahoo";
