@@ -70,7 +70,7 @@ type OperationsStore = StoreState &
     createJob: (input: CreateJobInput) => Job;
     createTestJob: () => Job;
     updateJob: (id: string, patch: JobPatch) => void;
-    addNote: (jobId: string, body: string) => void;
+    addNote: (jobId: string, body: string, author?: string) => void;
     markEmailRead: (id: string) => void;
     markNotificationsRead: () => void;
     resetDemo: () => void;
@@ -362,16 +362,17 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
     }));
   }, []);
 
-  const addNote = useCallback((jobId: string, body: string) => {
+  const addNote = useCallback((jobId: string, body: string, author?: string) => {
     const trimmed = body.trim();
     if (!trimmed) return;
+    const authorName = author?.trim() || "Operator";
     setState((current) => ({
       ...current,
       notes: [
         {
           id: `note-${Date.now()}`,
           jobId,
-          author: "Charlie",
+          author: authorName,
           body: trimmed,
           createdAt: new Date().toISOString(),
         },

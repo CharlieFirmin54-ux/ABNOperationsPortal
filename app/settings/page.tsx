@@ -1,12 +1,14 @@
 "use client";
 
 import { YahooMailboxLink } from "@/components/emails/yahoo-mailbox-link";
+import { useAuth } from "@/components/layout/auth-provider";
+import { PeoplePanel } from "@/components/settings/people-panel";
 import { Button } from "@/components/ui/button";
-import { OPERATOR } from "@/lib/seed-data";
 import { useOperations } from "@/lib/store";
 
 export default function SettingsPage() {
   const { resetDemo, jobs, emails, properties } = useOperations();
+  const { operator } = useAuth();
 
   return (
     <div className="space-y-6">
@@ -15,19 +17,22 @@ export default function SettingsPage() {
           Settings
         </h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Operator profile and mailbox sync for the ABN operations portal.
+          Operator profile, people logins, and mailbox sync for the ABN
+          operations portal.
         </p>
       </div>
 
       <section className="rounded-xl border border-white/8 bg-[#0c0c0c] p-5">
         <h3 className="text-sm font-medium text-white">Signed-in operator</h3>
         <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Item label="Name" value={OPERATOR.name} />
-          <Item label="Role" value={OPERATOR.role} />
-          <Item label="Email" value={OPERATOR.email} />
+          <Item label="Name" value={operator?.name ?? "—"} />
+          <Item label="Role" value={operator?.role ?? "—"} />
+          <Item label="Email" value={operator?.email ?? "—"} />
           <Item label="Company" value="ABN Property Maintenance" />
         </dl>
       </section>
+
+      <PeoplePanel />
 
       <section className="rounded-xl border border-white/8 bg-[#0c0c0c] p-5">
         <h3 className="text-sm font-medium text-white">Yahoo mailbox</h3>

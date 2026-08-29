@@ -1,22 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Menu, Search, User } from "lucide-react";
+import { Bell, LogOut, Menu, Search, User } from "lucide-react";
 import { YahooMailboxLink } from "@/components/emails/yahoo-mailbox-link";
+import { useAuth } from "@/components/layout/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Sidebar } from "@/components/layout/sidebar";
 import { formatLongDate, formatRelative, greetingForHour } from "@/lib/format";
-import { OPERATOR } from "@/lib/seed-data";
 import {
   jobMatchesQuery,
   propertyMatchesQuery,
@@ -212,17 +212,53 @@ export function Header() {
 }
 
 function UserChip() {
+  const router = useRouter();
+  const { operator, logout, loading } = useAuth();
+  const name = operator?.name ?? (loading ? "…" : "Operator");
+  const role = operator?.role ?? "";
+
   return (
-    <Link href="/settings" className="flex items-center gap-3">
-      <span className="flex size-9 items-center justify-center rounded-full border border-white/10 bg-[#161616] text-zinc-300">
-        <User className="size-4" />
-      </span>
-      <span className="hidden leading-tight sm:block">
-        <span className="block text-sm font-medium text-white">
-          {OPERATOR.name}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            className="flex cursor-pointer items-center gap-3 rounded-xl text-left hover:opacity-90"
+            aria-label="Account menu"
+          />
+        }
+      >
+        <span className="flex size-9 items-center justify-center rounded-full border border-white/10 bg-[#161616] text-zinc-300">
+          <User className="size-4" />
         </span>
-        <span className="block text-xs text-zinc-500">{OPERATOR.role}</span>
-      </span>
-    </Link>
+        <span className="hidden leading-tight sm:block">
+          <span className="block text-sm font-medium text-white">{name}</span>
+          <span className="block text-xs text-zinc-500">{role}</span>
+        </span>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52 bg-[#111]">
+        <div className="px-2 py-1.5 sm:hidden">
+          <p className="text-sm text-white">{name}</p>
+          <p className="text-xs text-zinc-500">{role}</p>
+        </div>
+        <DropdownMenuItem
+          onClick={() => {
+            router.push("/settings");
+          }}
+        >
+          Settings
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={() => {
+            void logout();
+          }}
+        >
+          <LogOut className="size-4" />
+          Log out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

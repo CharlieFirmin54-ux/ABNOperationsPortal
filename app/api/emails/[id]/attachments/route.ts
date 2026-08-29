@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireSession } from "@/lib/auth/guard";
 import { getDemoAttachment } from "@/lib/demo-attachment";
 import {
   contentDispositionHeader,
@@ -44,6 +45,9 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const session = await requireSession();
+  if (!session.ok) return session.response;
+
   const { id: rawId } = await context.params;
   const messageId = decodeURIComponent(rawId ?? "");
   const url = new URL(request.url);
