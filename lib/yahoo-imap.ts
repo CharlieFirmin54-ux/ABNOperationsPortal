@@ -14,8 +14,9 @@ const DEFAULT_LIMIT = process.env.VERCEL ? 15 : 40;
 const FETCH_TIMEOUT_MS = process.env.VERCEL ? 8_000 : 25_000;
 const CONNECT_TIMEOUT_MS = process.env.VERCEL ? 6_000 : 15_000;
 const ATTACHMENT_TIMEOUT_MS = process.env.VERCEL ? 8_000 : 45_000;
-const SOURCE_MAX_BYTES = process.env.VERCEL ? 12_000 : 40_000;
-const BODY_MAX_CHARS = 8_000;
+const SOURCE_MAX_BYTES = process.env.VERCEL ? 50_000 : 80_000;
+const FULL_SOURCE_MAX_BYTES = 400_000;
+const BODY_MAX_CHARS = 40_000;
 const PREVIEW_MAX_CHARS = 110;
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 
@@ -356,6 +357,7 @@ async function mapImapMessage(message: {
     date?: Date | string | null;
     subject?: string | null;
     from?: { name?: string | null; address?: string | null }[];
+    to?: { name?: string | null; address?: string | null }[];
   };
   internalDate?: Date | string;
   source?: Buffer;
@@ -365,6 +367,11 @@ async function mapImapMessage(message: {
   let fromEmail = fromHeader?.address?.trim() || "unknown@email";
   let fromName = fromHeader?.name?.trim() || localPart(fromEmail);
   let subject = message.envelope?.subject?.trim() || "(no subject)";
+  let to =
+    message.envelope?.to
+      ?.map((item) => item.address?.trim())
+      .filter((address): address is string => Boolean(address))
+      .join(", ") || "";
   let body = "";
 
   if (message.source && message.source.length > 0) {
@@ -374,6 +381,15 @@ async function mapImapMessage(message: {
       if (parsedFrom?.address) fromEmail = parsedFrom.address;
       if (parsedFrom?.name) fromName = parsedFrom.name;
       if (parsed.subject) subject = parsed.subject;
+      const toAddresses = [parsed.to].flat().filter(Boolean);
+      const parsedTo = toAddresses.flatMap((entry) => {
+        if (!entry || typeof entry !== "object" || !("value" in entry)) return [];
+        const list = (entry as { value?: { address?: string | null }[] }).value;
+        return (list ?? [])
+          .map((item) => item.address?.trim())
+          .filter((address): address is string => Boolean(address));
+      });
+      if (parsedTo.length) to = parsedTo.join(", ");
       const text =
         parsed.text?.trim() ||
         (parsed.html ? htmlToPlain(String(parsed.html)) : "");
@@ -394,19 +410,22 @@ async function mapImapMessage(message: {
     received instanceof Date
       ? received.toISOString()
       : new Date(received).toISOString();
+  const partial = !body;
 
   return {
     id: `yahoo-${message.uid}`,
     fromName: fromName || localPart(fromEmail),
     fromEmail,
+    to: to || undefined,
     subject,
-    preview: collapsePreview(body) || subject,
-    body: body || subject,
+    preview: collapsePreview(body) || (partial ? "Open to load the full message." : subject),
+    body,
     receivedAt: Number.isNaN(Date.parse(receivedAt))
       ? new Date().toISOString()
       : receivedAt,
     read: message.flags?.has("\\Seen") ?? false,
     attachments: attachmentsFromStructure(message.bodyStructure),
+    partial,
   };
 }
 
@@ -423,7 +442,6 @@ async function fetchYahooInboxUncached(limit: number): Promise<InboxEmail[]> {
       if (!mailbox || exists === 0) return;
 
       const start = Math.max(1, exists - Math.max(1, limit) + 1);
-      const includeSource = !process.env.VERCEL;
 
       for await (const message of client.fetch(`${start}:${exists}`, {
         uid: true,
@@ -431,7 +449,7 @@ async function fetchYahooInboxUncached(limit: number): Promise<InboxEmail[]> {
         flags: true,
         internalDate: true,
         bodyStructure: true,
-        ...(includeSource ? { source: { maxLength: SOURCE_MAX_BYTES } } : {}),
+        source: { maxLength: SOURCE_MAX_BYTES },
       })) {
         emails.push(await mapImapMessage(message));
       }
@@ -477,6 +495,37 @@ export async function fetchYahooInbox(
     });
 
   return inboxInflight;
+}
+
+export class YahooMessageNotFoundError extends Error {
+  constructor() {
+    super("That message is not in the mailbox.");
+    this.name = "YahooMessageNotFoundError";
+  }
+}
+
+export async function fetchYahooMessage(uid: number): Promise<InboxEmail> {
+  return withYahooInbox(async (client) => {
+    const message = await client.fetchOne(
+      String(uid),
+      {
+        uid: true,
+        envelope: true,
+        flags: true,
+        internalDate: true,
+        bodyStructure: true,
+        source: { maxLength: FULL_SOURCE_MAX_BYTES },
+      },
+      { uid: true }
+    );
+    if (!message || typeof message === "boolean") {
+      throw new YahooMessageNotFoundError();
+    }
+    return mapImapMessage({
+      ...message,
+      uid: message.uid ?? uid,
+    });
+  }, ATTACHMENT_TIMEOUT_MS);
 }
 
 export class YahooAttachmentNotFoundError extends Error {

@@ -72,3 +72,18 @@ export async function loadMailboxCache(): Promise<CachedMailbox | null> {
   }
   return memoryCache;
 }
+
+export async function patchMailboxCacheEmail(email: InboxEmail): Promise<void> {
+  const cached = await loadMailboxCache();
+  if (!cached) {
+    await saveMailboxCache("", [email]);
+    return;
+  }
+  const emails = cached.emails.map((item) =>
+    item.id === email.id ? { ...item, ...email, partial: false } : item
+  );
+  if (!emails.some((item) => item.id === email.id)) {
+    emails.unshift(email);
+  }
+  await saveMailboxCache(cached.mailbox, emails);
+}
