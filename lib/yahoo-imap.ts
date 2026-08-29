@@ -9,10 +9,11 @@ import {
 
 const DEFAULT_HOST = "imap.mail.yahoo.com";
 const DEFAULT_PORT = 993;
-const DEFAULT_LIMIT = 40;
-const FETCH_TIMEOUT_MS = 25_000;
-const ATTACHMENT_TIMEOUT_MS = 45_000;
-const SOURCE_MAX_BYTES = 150_000;
+const DEFAULT_LIMIT = process.env.VERCEL ? 15 : 40;
+const FETCH_TIMEOUT_MS = process.env.VERCEL ? 8_000 : 25_000;
+const CONNECT_TIMEOUT_MS = process.env.VERCEL ? 6_000 : 15_000;
+const ATTACHMENT_TIMEOUT_MS = process.env.VERCEL ? 8_000 : 45_000;
+const SOURCE_MAX_BYTES = process.env.VERCEL ? 12_000 : 40_000;
 const BODY_MAX_CHARS = 8_000;
 const PREVIEW_MAX_CHARS = 110;
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
@@ -91,7 +92,11 @@ export function sanitizeImapError(
     lower.includes("eai_again") ||
     lower.includes("certificate") ||
     lower.includes("socket") ||
-    lower.includes("closed")
+    lower.includes("closed") ||
+    lower.includes("aborted") ||
+    lower.includes("destroyed") ||
+    lower.includes("not available") ||
+    lower.includes("function_invocation")
   ) {
     const host = process.env.YAHOO_IMAP_HOST?.trim() || DEFAULT_HOST;
     return `Could not reach Yahoo IMAP (${host}:993). Check that IMAP is enabled for the mailbox and this network allows outbound mail.`;
@@ -233,8 +238,8 @@ async function withYahooInbox<T>(
     logger: false,
     emitLogs: false,
     logRaw: false,
-    connectionTimeout: 15_000,
-    greetingTimeout: 15_000,
+    connectionTimeout: CONNECT_TIMEOUT_MS,
+    greetingTimeout: CONNECT_TIMEOUT_MS,
     socketTimeout: timeoutMs,
   });
 
@@ -327,34 +332,45 @@ async function mapImapMessage(message: {
 
 let inboxCache: { at: number; emails: InboxEmail[] } | null = null;
 let inboxInflight: Promise<InboxEmail[]> | null = null;
-const INBOX_CACHE_MS = 20_000;
+const INBOX_CACHE_MS = 60_000;
 
 async function fetchYahooInboxUncached(limit: number): Promise<InboxEmail[]> {
-  return withYahooInbox(async (client) => {
-    const mailbox = client.mailbox;
-    const exists = mailbox ? mailbox.exists : 0;
-    if (!mailbox || exists === 0) return [];
+  const emails: InboxEmail[] = [];
+  try {
+    await withYahooInbox(async (client) => {
+      const mailbox = client.mailbox;
+      const exists = mailbox ? mailbox.exists : 0;
+      if (!mailbox || exists === 0) return;
 
-    const start = Math.max(1, exists - Math.max(1, limit) + 1);
-    const emails: InboxEmail[] = [];
+      const start = Math.max(1, exists - Math.max(1, limit) + 1);
 
-    for await (const message of client.fetch(`${start}:${exists}`, {
-      uid: true,
-      envelope: true,
-      flags: true,
-      internalDate: true,
-      bodyStructure: true,
-      source: { maxLength: SOURCE_MAX_BYTES },
-    })) {
-      emails.push(await mapImapMessage(message));
+      for await (const message of client.fetch(`${start}:${exists}`, {
+        uid: true,
+        envelope: true,
+        flags: true,
+        internalDate: true,
+        bodyStructure: true,
+        source: { maxLength: SOURCE_MAX_BYTES },
+      })) {
+        emails.push(await mapImapMessage(message));
+      }
+    });
+  } catch (error) {
+    if (emails.length > 0) {
+      emails.sort(
+        (a, b) =>
+          new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
+      );
+      return emails;
     }
+    throw error;
+  }
 
-    emails.sort(
-      (a, b) =>
-        new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
-    );
-    return emails;
-  });
+  emails.sort(
+    (a, b) =>
+      new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
+  );
+  return emails;
 }
 
 export async function fetchYahooInbox(
