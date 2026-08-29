@@ -27,7 +27,7 @@ export function MessageAttachments({
     : null;
 
   return (
-    <section className="max-w-2xl space-y-3 border-t border-white/8 pt-4">
+    <section className="max-w-2xl space-y-3">
       <div className="flex items-center gap-2">
         <Paperclip className="size-3.5 text-zinc-500" />
         <h4 className="text-sm font-medium text-white">Attachments</h4>

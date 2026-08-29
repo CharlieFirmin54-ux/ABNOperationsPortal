@@ -155,7 +155,7 @@ export default function EmailsPage() {
         </div>
       ) : (
         <div className="grid overflow-hidden rounded-xl border border-white/8 bg-[#0c0c0c] lg:grid-cols-[320px_1fr]">
-          <ul className="divide-y divide-white/8 border-b border-white/8 lg:border-r lg:border-b-0">
+          <ul className="divide-y divide-white/8 overflow-y-auto border-b border-white/8 lg:max-h-[calc(100vh-16rem)] lg:border-r lg:border-b-0">
             {displayed.map((email) => {
               const active = selected?.id === email.id;
               return (
@@ -209,7 +209,7 @@ export default function EmailsPage() {
           </ul>
 
           {selected && (
-            <article className="space-y-4 p-5 lg:p-8">
+            <article className="space-y-4 overflow-y-auto p-5 lg:max-h-[calc(100vh-16rem)] lg:p-8">
               <div>
                 <h3 className="text-xl font-medium text-white">
                   {selected.subject}
@@ -224,14 +224,14 @@ export default function EmailsPage() {
                   {formatDateTime(selected.receivedAt)}
                 </p>
               </div>
-              <p className="max-w-2xl whitespace-pre-wrap text-sm leading-6 text-zinc-300">
-                {selected.body}
-              </p>
               <MessageAttachments
                 key={selected.id}
                 messageId={selected.id}
                 attachments={selected.attachments}
               />
+              <p className="max-w-2xl whitespace-pre-wrap text-sm leading-6 text-zinc-300">
+                {selected.body}
+              </p>
               <div className="flex flex-wrap items-center gap-3">
                 {linkedJob && (
                   <p className="text-sm text-zinc-500">
