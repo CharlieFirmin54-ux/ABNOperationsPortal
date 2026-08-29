@@ -47,6 +47,7 @@ export type InboxEmail = {
   id: string;
   fromName: string;
   fromEmail: string;
+  to?: string;
   subject: string;
   preview: string;
   body: string;
@@ -54,6 +55,7 @@ export type InboxEmail = {
   read: boolean;
   jobId?: string;
   attachments?: EmailAttachment[];
+  partial?: boolean;
 };
 
 export type InboxSource = "yahoo" | "demo" | "unconfigured" | "error";

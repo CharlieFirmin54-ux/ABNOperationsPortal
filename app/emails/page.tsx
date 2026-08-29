@@ -19,6 +19,8 @@ export default function EmailsPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   const loadInbox = useCallback(async (fresh = false) => {
     setLoading(true);
@@ -72,6 +74,47 @@ export default function EmailsPage() {
 
   const selected =
     displayed.find((email) => email.id === selectedId) ?? displayed[0] ?? null;
+
+  useEffect(() => {
+    if (!selected?.id) return;
+    let cancelled = false;
+    setDetailLoading(true);
+    setDetailError(null);
+    fetch(`/api/emails/${encodeURIComponent(selected.id)}`, { cache: "no-store" })
+      .then(async (response) => {
+        const data = (await response.json()) as {
+          email?: InboxEmail;
+          error?: string;
+        };
+        if (!response.ok || !data.email) {
+          throw new Error(data.error || "Could not load that message.");
+        }
+        return data.email;
+      })
+      .then((email) => {
+        if (cancelled) return;
+        setInbox((current) => {
+          if (!current) return current;
+          const emails = current.emails.map((item) =>
+            item.id === email.id ? { ...item, ...email, partial: false } : item
+          );
+          return { ...current, emails };
+        });
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setDetailError(
+            err instanceof Error ? err.message : "Could not load that message."
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selected?.id]);
   const linkedJob = jobs.find(
     (job) => job.id === selected?.jobId || job.jobNo === selected?.jobId
   );
@@ -221,29 +264,50 @@ export default function EmailsPage() {
           </ul>
 
           {selected && (
-            <article className="space-y-4 overflow-y-auto p-5 lg:max-h-[calc(100vh-16rem)] lg:p-8">
+            <article className="space-y-5 overflow-y-auto p-5 lg:max-h-[calc(100vh-16rem)] lg:p-8">
               <div>
                 <h3 className="text-xl font-medium text-white">
                   {selected.subject}
                 </h3>
-                <p className="mt-2 text-sm text-zinc-400">
-                  {selected.fromName}{" "}
-                  <span className="text-zinc-600">
-                    &lt;{selected.fromEmail}&gt;
-                  </span>
-                </p>
-                <p className="text-xs text-zinc-600">
-                  {formatDateTime(selected.receivedAt)}
-                </p>
+                <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                  <Detail label="From" value={`${selected.fromName} <${selected.fromEmail}>`} />
+                  <Detail label="To" value={selected.to || inbox?.mailbox || "—"} />
+                  <Detail label="Date" value={formatDateTime(selected.receivedAt)} />
+                  <Detail
+                    label="Attachments"
+                    value={
+                      selected.attachments?.length
+                        ? `${selected.attachments.length} file${selected.attachments.length === 1 ? "" : "s"}`
+                        : "None"
+                    }
+                  />
+                </dl>
               </div>
+              {detailError && (
+                <p className="text-sm text-[#fca5a5]">{detailError}</p>
+              )}
+              {detailLoading && (
+                <p className="text-sm text-zinc-500">Loading full message…</p>
+              )}
               <MessageAttachments
                 key={selected.id}
                 messageId={selected.id}
                 attachments={selected.attachments}
               />
-              <p className="max-w-2xl whitespace-pre-wrap text-sm leading-6 text-zinc-300">
-                {selected.body}
-              </p>
+              <section>
+                <h4 className="text-sm font-medium text-white">Message</h4>
+                {selected.body ? (
+                  <p className="mt-2 max-w-2xl whitespace-pre-wrap text-sm leading-6 text-zinc-300">
+                    {selected.body}
+                  </p>
+                ) : (
+                  <p className="mt-2 text-sm text-zinc-500">
+                    {detailLoading
+                      ? "Fetching the full Yahoo message…"
+                      : "No message text was available."}
+                  </p>
+                )}
+              </section>
               <div className="flex flex-wrap items-center gap-3">
                 {linkedJob && (
                   <p className="text-sm text-zinc-500">
@@ -274,6 +338,17 @@ export default function EmailsPage() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-[11px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
+        {label}
+      </dt>
+      <dd className="mt-1 break-words text-zinc-200">{value}</dd>
     </div>
   );
 }
