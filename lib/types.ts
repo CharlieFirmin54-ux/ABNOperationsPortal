@@ -1,11 +1,5 @@
-export type Priority = "P1" | "P2" | "P3" | "P4";
-export type JobStatus =
-  | "New"
-  | "Allocated"
-  | "In Progress"
-  | "On Hold"
-  | "Completed"
-  | "Cancelled";
+export type Priority = "P1" | "Normal";
+export type JobStatus = "Open" | "TT Contacted" | "Completed";
 export type JobCategory =
   | "Heating"
   | "Plumbing"

@@ -15,9 +15,9 @@ Open [http://localhost:43127](http://localhost:43127).
 
 ## What you can do
 
-- Review P1, open, completed, and total job counts on the dashboard
+- Review P1, Open, Completed, and TT Contacted job counts on the dashboard
 - Raise a test job or a full works order
-- Filter and open jobs, change status/priority, and add notes
+- Filter jobs by P1, Open, TT Contacted, or Completed, then update those flags and add notes
 - Browse properties derived from jobsheet addresses
 - Read repair emails from **Yahoo Mail over IMAP**
 - Open a **Yahoo mailbox** in a new tab and reply from Yahoo compose

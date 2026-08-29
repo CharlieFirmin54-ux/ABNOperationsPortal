@@ -72,7 +72,11 @@ export function JobsTable({
               {job.organisation}
             </TableCell>
             <TableCell className="px-4 py-4">
-              <PriorityBadge value={job.priority} />
+              {job.priority === "P1" ? (
+                <PriorityBadge value={job.priority} />
+              ) : (
+                <span className="text-zinc-600">—</span>
+              )}
             </TableCell>
             <TableCell className="px-4 py-4">
               <StatusBadge value={job.status} />

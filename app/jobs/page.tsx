@@ -7,26 +7,34 @@ import { JobsTable } from "@/components/jobs/jobs-table";
 import { MailboxNotice } from "@/components/mailbox-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { jobMatchesQuery, STATUSES, useOperations } from "@/lib/store";
-import type { JobStatus, Priority } from "@/lib/types";
+import { jobMatchesQuery, useOperations } from "@/lib/store";
+import type { JobStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const PRIORITY_FILTERS: Array<Priority | "All"> = ["All", "P1", "P2", "P3", "P4"];
+type JobListFilter = "All" | "P1" | JobStatus;
+
+const JOB_FILTERS: JobListFilter[] = [
+  "All",
+  "P1",
+  "Open",
+  "TT Contacted",
+  "Completed",
+];
 
 export default function JobsPage() {
   const { jobs, hydrated, source } = useOperations();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [priority, setPriority] = useState<Priority | "All">("All");
-  const [status, setStatus] = useState<JobStatus | "All">("All");
+  const [flag, setFlag] = useState<JobListFilter>("All");
 
   const filtered = useMemo(() => {
     return jobs.filter((job) => {
-      if (priority !== "All" && job.priority !== priority) return false;
-      if (status !== "All" && job.status !== status) return false;
-      return jobMatchesQuery(job, query);
+      if (!jobMatchesQuery(job, query)) return false;
+      if (flag === "All") return true;
+      if (flag === "P1") return job.priority === "P1";
+      return job.status === flag;
     });
-  }, [jobs, priority, query, status]);
+  }, [flag, jobs, query]);
 
   return (
     <div className="space-y-6">
@@ -58,27 +66,13 @@ export default function JobsPage() {
           className="h-10 border-white/10 bg-[#161616]"
         />
         <div className="flex flex-wrap gap-2">
-          {PRIORITY_FILTERS.map((value) => (
+          {JOB_FILTERS.map((value) => (
             <FilterChip
               key={value}
-              active={priority === value}
-              onClick={() => setPriority(value)}
+              active={flag === value}
+              onClick={() => setFlag(value)}
             >
-              {value === "All" ? "All priorities" : value}
-            </FilterChip>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <FilterChip active={status === "All"} onClick={() => setStatus("All")}>
-            All statuses
-          </FilterChip>
-          {STATUSES.map((value) => (
-            <FilterChip
-              key={value}
-              active={status === value}
-              onClick={() => setStatus(value)}
-            >
-              {value}
+              {value === "All" ? "All jobs" : value}
             </FilterChip>
           ))}
         </div>

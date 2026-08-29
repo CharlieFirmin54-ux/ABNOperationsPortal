@@ -17,7 +17,7 @@ const JOB_NO_RE =
 const SUBJECT_JOBSHEET_RE =
   /^jobsheet\s+(\d{4,6})\s*:\s*(.+?)\s+for\s+(.+)$/i;
 
-const PRIORITY_RE = /\bP([1-4])\b/i;
+const P1_RE = /\bP1\b/i;
 
 const JOBSHEET_LABELS = [
   "Date Issued",
@@ -263,8 +263,7 @@ function organisationFromEmail(email: InboxEmail, body: string): string {
 
 function parsePriority(subject: string, body: string, title: string): Priority {
   const haystack = `${subject}\n${title}\n${body}`;
-  const tagged = PRIORITY_RE.exec(haystack);
-  if (tagged) return `P${tagged[1]}` as Priority;
+  if (P1_RE.test(haystack)) return "P1";
 
   if (
     /\b(emergency|no heating|no hot water|boiler (?:down|lockout|not firing)|burst pipe)\b/i.test(
@@ -273,32 +272,23 @@ function parsePriority(subject: string, body: string, title: string): Priority {
   ) {
     return "P1";
   }
-  if (/\b(10\s*day|void works|turn around)\b/i.test(haystack)) return "P2";
-  if (/\b(electrical safety|certificate|eicr|pv\s*maint|planned)\b/i.test(haystack)) {
-    return "P4";
-  }
-  if (/\b(leak|not working|alarm)\b/i.test(haystack)) {
-    return "P2";
-  }
-  return "P3";
+  return "Normal";
 }
 
 function parseStatus(subject: string, body: string): JobStatus {
   const haystack = `${subject}\n${body}`;
-  if (/\b(cancelled|cancel the job)\b/i.test(haystack)) return "Cancelled";
+  if (/\b(cancelled|cancel the job)\b/i.test(haystack)) return "Completed";
   if (/\b(completed|completion confirmation|works complete|job closed)\b/i.test(haystack)) {
     return "Completed";
   }
-  if (/\b(on hold|hold works|awaiting (?:survey|parts))\b/i.test(haystack)) {
-    return "On Hold";
+  if (
+    /\b(tt contacted|tenant contacted|spoke (?:to|with) (?:the )?tenant|tenant informed|left (?:a )?voicemail|left (?:a )?message (?:for|with) (?:the )?tenant)\b/i.test(
+      haystack
+    )
+  ) {
+    return "TT Contacted";
   }
-  if (/\b(in progress|engineer attending|on site)\b/i.test(haystack)) {
-    return "In Progress";
-  }
-  if (/\b(allocated|instructed|please attend)\b/i.test(haystack)) {
-    return "Allocated";
-  }
-  return "New";
+  return "Open";
 }
 
 function parseCategory(title: string, description: string): JobCategory {
@@ -496,7 +486,7 @@ export function buildMailboxFromEmails(emails: InboxEmail[]): MailboxBuild {
   });
 
   const notifications: NotificationItem[] = jobs
-    .filter((job) => job.priority === "P1" || job.status === "New")
+    .filter((job) => job.priority === "P1" || job.status === "Open")
     .slice(0, 8)
     .map((job) => ({
       id: `ntf-${job.id}`,

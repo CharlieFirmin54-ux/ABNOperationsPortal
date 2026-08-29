@@ -136,7 +136,7 @@ export default function JobDetailPage() {
               >
                 {PRIORITIES.map((value) => (
                   <option key={value} value={value}>
-                    {value}
+                    {value === "P1" ? "P1" : "Normal"}
                   </option>
                 ))}
               </select>

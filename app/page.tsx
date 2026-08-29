@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Box, Circle, Loader2, RefreshCw } from "lucide-react";
+import { Circle, Loader2, RefreshCw } from "lucide-react";
 import { JobsTable } from "@/components/jobs/jobs-table";
 import { MailboxNotice } from "@/components/mailbox-notice";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,12 @@ export default function DashboardPage() {
     const p1 = jobs.filter(
       (job) => job.priority === "P1" && isOpenJob(job)
     ).length;
-    const open = jobs.filter(isOpenJob).length;
+    const open = jobs.filter((job) => job.status === "Open").length;
     const completed = jobs.filter((job) => job.status === "Completed").length;
-    return { p1, open, completed, total: jobs.length };
+    const ttContacted = jobs.filter(
+      (job) => job.status === "TT Contacted"
+    ).length;
+    return { p1, open, completed, ttContacted };
   }, [jobs]);
 
   const recent = useMemo(
@@ -111,11 +114,11 @@ export default function DashboardPage() {
             icon={<Circle className="size-3 fill-current" />}
           />
           <KpiCard
-            label="Total Jobs"
-            value={stats.total}
-            description="Total jobs currently stored in the system."
+            label="TT Contacted"
+            value={stats.ttContacted}
+            description="Jobs where the tenant has been contacted."
             accent="blue"
-            icon={<Box className="size-3.5" />}
+            icon={<Circle className="size-3 fill-current" />}
           />
         </div>
       )}

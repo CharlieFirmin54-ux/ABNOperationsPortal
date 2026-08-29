@@ -14,8 +14,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CATEGORIES, PRIORITIES, useOperations } from "@/lib/store";
-import type { JobCategory, Priority } from "@/lib/types";
+import { CATEGORIES, PRIORITIES, STATUSES, useOperations } from "@/lib/store";
+import type { JobCategory, JobStatus, Priority } from "@/lib/types";
 
 export function CreateJobDialog({
   open,
@@ -28,7 +28,8 @@ export function CreateJobDialog({
   const { properties, createJob } = useOperations();
   const [propertyId, setPropertyId] = useState("");
   const [tenant, setTenant] = useState("");
-  const [priority, setPriority] = useState<Priority>("P1");
+  const [priority, setPriority] = useState<Priority>("Normal");
+  const [status, setStatus] = useState<JobStatus>("Open");
   const [category, setCategory] = useState<JobCategory>("Heating");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
@@ -59,6 +60,7 @@ export function CreateJobDialog({
       tenant: tenantValue,
       propertyId: resolvedPropertyId,
       priority,
+      status,
       category,
       description,
     });
@@ -129,28 +131,43 @@ export function CreateJobDialog({
               >
                 {PRIORITIES.map((value) => (
                   <option key={value} value={value}>
-                    {value}
+                    {value === "P1" ? "P1" : "Normal"}
                   </option>
                 ))}
               </select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="category">Trade</Label>
+              <Label htmlFor="status">Status</Label>
               <select
-                id="category"
-                value={category}
-                onChange={(event) =>
-                  setCategory(event.target.value as JobCategory)
-                }
+                id="status"
+                value={status}
+                onChange={(event) => setStatus(event.target.value as JobStatus)}
                 className="h-9 rounded-lg border border-white/10 bg-[#0c0c0c] px-3 text-sm text-white"
               >
-                {CATEGORIES.map((value) => (
+                {STATUSES.map((value) => (
                   <option key={value} value={value}>
                     {value}
                   </option>
                 ))}
               </select>
             </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="category">Trade</Label>
+            <select
+              id="category"
+              value={category}
+              onChange={(event) =>
+                setCategory(event.target.value as JobCategory)
+              }
+              className="h-9 rounded-lg border border-white/10 bg-[#0c0c0c] px-3 text-sm text-white"
+            >
+              {CATEGORIES.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="description">Fault description</Label>

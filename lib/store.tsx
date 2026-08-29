@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { nextJobNumber } from "@/lib/format";
+import { nextJobNumber, normalizePriority, normalizeStatus } from "@/lib/format";
 import type {
   InboxEmail,
   InboxSource,
@@ -47,6 +47,7 @@ type CreateJobInput = {
   tenantEmail?: string;
   propertyId: string;
   priority: Priority;
+  status?: JobStatus;
   category: JobCategory;
   description: string;
 };
@@ -107,10 +108,27 @@ function propertiesFromJobs(jobs: Job[], extras: Property[] = []): Property[] {
   return [...map.values()].sort((a, b) => a.address.localeCompare(b.address));
 }
 
+function classifyJob<T extends { priority?: string; status?: string }>(
+  job: T
+): T & { priority: Priority; status: JobStatus } {
+  return {
+    ...job,
+    priority: normalizePriority(job.priority),
+    status: normalizeStatus(job.status),
+  };
+}
+
+function classifyPatch(patch: JobPatch): JobPatch {
+  const next: JobPatch = { ...patch };
+  if (patch.priority) next.priority = normalizePriority(patch.priority);
+  if (patch.status) next.status = normalizeStatus(patch.status);
+  return next;
+}
+
 function applyPatches(jobs: Job[], patches: Record<string, JobPatch>): Job[] {
   return jobs.map((job) => {
     const patch = patches[job.id];
-    return patch ? { ...job, ...patch } : job;
+    return classifyJob(patch ? { ...job, ...patch } : job);
   });
 }
 
@@ -182,13 +200,19 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
         const raw = window.localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw) as Partial<StoreState>;
+          const patches = Object.fromEntries(
+            Object.entries(parsed.jobPatches ?? {}).map(([id, patch]) => [
+              id,
+              classifyPatch(patch),
+            ])
+          );
           setState({
-            jobs: parsed.jobs ?? [],
+            jobs: applyPatches(parsed.jobs ?? [], patches),
             properties: parsed.properties ?? [],
             emails: parsed.emails ?? [],
             notes: parsed.notes ?? [],
             notifications: parsed.notifications ?? [],
-            jobPatches: parsed.jobPatches ?? {},
+            jobPatches: patches,
           });
         }
       } catch {
@@ -255,8 +279,8 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
       tenantEmail: input.tenantEmail?.trim() || "",
       address,
       organisation,
-      priority: input.priority,
-      status: "New",
+      priority: normalizePriority(input.priority),
+      status: normalizeStatus(input.status ?? "Open"),
       category: input.category,
       description: input.description.trim(),
       propertyId,
@@ -293,6 +317,7 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
         tenant: property?.tenant || "Test tenant",
         propertyId: property?.id || "prop-unassigned",
         priority: "P1",
+        status: "Open",
         category: "General",
         description:
           "Test job created from the operations dashboard. Confirm the fault and access on arrival.",
@@ -306,11 +331,11 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
       ...current,
       jobPatches: {
         ...current.jobPatches,
-        [id]: { ...current.jobPatches[id], ...patch },
+        [id]: classifyPatch({ ...current.jobPatches[id], ...patch }),
       },
       jobs: current.jobs.map((job) =>
         job.id === id
-          ? { ...job, ...patch, updatedAt: new Date().toISOString() }
+          ? classifyJob({ ...job, ...patch, updatedAt: new Date().toISOString() })
           : job
       ),
     }));
@@ -423,16 +448,9 @@ export function propertyMatchesQuery(property: Property, query: string) {
     .includes(q);
 }
 
-export const STATUSES: JobStatus[] = [
-  "New",
-  "Allocated",
-  "In Progress",
-  "On Hold",
-  "Completed",
-  "Cancelled",
-];
+export const STATUSES: JobStatus[] = ["Open", "TT Contacted", "Completed"];
 
-export const PRIORITIES: Priority[] = ["P1", "P2", "P3", "P4"];
+export const PRIORITIES: Priority[] = ["P1", "Normal"];
 export const CATEGORIES: JobCategory[] = [
   "Heating",
   "Plumbing",

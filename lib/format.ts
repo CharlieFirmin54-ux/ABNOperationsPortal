@@ -1,4 +1,4 @@
-import type { Job, JobStatus } from "@/lib/types";
+import type { Job, JobStatus, Priority } from "@/lib/types";
 
 export function formatLongDate(value: Date | string = new Date()) {
   const date = typeof value === "string" ? new Date(value) : value;
@@ -49,15 +49,18 @@ export function greetingForHour(hour = new Date().getHours()) {
   return "Good Evening";
 }
 
-export const OPEN_STATUSES: JobStatus[] = [
-  "New",
-  "Allocated",
-  "In Progress",
-  "On Hold",
-];
+export function normalizePriority(value: string | undefined | null): Priority {
+  return value === "P1" ? "P1" : "Normal";
+}
+
+export function normalizeStatus(value: string | undefined | null): JobStatus {
+  if (value === "TT Contacted") return "TT Contacted";
+  if (value === "Completed" || value === "Cancelled") return "Completed";
+  return "Open";
+}
 
 export function isOpenJob(job: Job) {
-  return OPEN_STATUSES.includes(job.status);
+  return job.status !== "Completed";
 }
 
 export function nextJobNumber(jobs: Job[]) {

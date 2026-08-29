@@ -51,7 +51,7 @@ export default function ReportsPage() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-3">
-            <Stat label="Open workload" value={open} hint="Jobs still live" />
+            <Stat label="Open workload" value={open} hint="Open and TT Contacted" />
             <Stat label="Emergency P1s" value={p1} hint="Need same-day attendance" />
             <Stat
               label="Properties"
