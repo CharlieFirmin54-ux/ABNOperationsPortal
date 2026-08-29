@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# operator logins (hashed passwords, never commit)
+/data/operators.json
+

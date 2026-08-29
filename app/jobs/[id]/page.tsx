@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CategoryBadge, PriorityBadge, StatusBadge } from "@/components/jobs/badges";
+import { useAuth } from "@/components/layout/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +17,7 @@ export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { jobs, properties, notes, emails, updateJob, addNote, hydrated } =
     useOperations();
+  const { operator } = useAuth();
   const [note, setNote] = useState("");
 
   const job = jobs.find((item) => item.id === id);
@@ -175,7 +177,7 @@ export default function JobDetailPage() {
           <Button
             className="bg-[#e11d2e] text-white hover:bg-[#c41626]"
             onClick={() => {
-              addNote(job.id, note);
+              addNote(job.id, note, operator?.name);
               setNote("");
             }}
           >

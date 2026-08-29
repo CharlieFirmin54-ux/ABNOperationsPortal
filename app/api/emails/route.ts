@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireSession } from "@/lib/auth/guard";
 import { syncMailboxFromYahoo, wantsFresh } from "@/lib/mailbox-sync";
 import type { InboxFetchResult } from "@/lib/types";
 
@@ -11,6 +12,8 @@ function payload(result: InboxFetchResult, status = 200) {
 }
 
 export async function GET(request: Request) {
+  const session = await requireSession();
+  if (!session.ok) return session.response;
   const synced = await syncMailboxFromYahoo({ fresh: wantsFresh(request) });
   return payload({
     source: synced.source === "error" ? "error" : synced.source,

@@ -11,7 +11,11 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:43127](http://localhost:43127).
+Open [http://localhost:43127](http://localhost:43127). You will be asked to sign in before the dashboard, jobs, emails, and the rest of the portal.
+
+Local Charlie (Administrator) is seeded from `.env.local` — email `charlie@abnmaintenance.co.uk`. Set `AUTH_SEED_PASSWORD` there (never commit it). Extra people can be added from **Settings → People / Logins**; those accounts are written to gitignored `data/operators.json`.
+
+## Production (operations.abnmaintenance.co.uk)
 
 ## Production (operations.abnmaintenance.co.uk)
 
@@ -28,14 +32,21 @@ This is a Next.js app with live Yahoo IMAP, so it needs a Node.js host (Vercel i
 npx vercel --prod --yes
 ```
 
-3. In the Vercel project, set **Production** environment variables (never commit `.env.local`):
+3. In the Vercel project, set **Production** environment variables (never commit `.env.local` or passwords):
 
 ```bash
 YAHOO_EMAIL
 YAHOO_APP_PASSWORD
+AUTH_SECRET
+AUTH_SEED_NAME=Charlie
+AUTH_SEED_EMAIL=charlie@abnmaintenance.co.uk
+AUTH_SEED_ROLE=Administrator
+AUTH_SEED_PASSWORD
 ```
 
-Optional: `YAHOO_IMAP_HOST` (default `imap.mail.yahoo.com`), `YAHOO_IMAP_PORT` (default `993`). Copy values from local `.env.local`. Preview deployments need the same vars if you want the live mailbox there too.
+`AUTH_SECRET` must be a long random string (`openssl rand -hex 32`). Login users are **not** in git — configure Charlie with `AUTH_SEED_PASSWORD`, and any other operators with `AUTH_OPERATORS` JSON (name, email, role, password). Extra people added in Settings are stored on local disk only and will not persist on Vercel.
+
+Optional: `YAHOO_IMAP_HOST` (default `imap.mail.yahoo.com`), `YAHOO_IMAP_PORT` (default `993`). Copy mailbox values from local `.env.local`. Preview deployments need the same vars if you want the live mailbox there too.
 
 4. Attach the custom domain:
 
@@ -67,6 +78,8 @@ After DNS updates, Vercel issues HTTPS automatically. Until those records change
 
 ## What you can do
 
+- Sign in as an operator (Charlie is the seeded Administrator)
+- Add more people from Settings (name, email, role, password)
 - Review P1, Open, Completed, and TT Contacted job counts on the dashboard
 - Raise a test job or a full works order
 - Filter jobs by P1, Open, TT Contacted, or Completed, then update those flags and add notes
@@ -76,6 +89,20 @@ After DNS updates, Vercel issues HTTPS automatically. Until those records change
 - Check a simple workload report
 
 Jobs are parsed from the connected mailbox (jobsheets and repair reports). Local status changes and notes stay in this browser. Use **Settings → Clear local notes and status changes** to drop those edits and re-sync from mail.
+
+## Operator logins
+
+The portal uses a signed httpOnly session cookie (not OAuth). Passwords are hashed with scrypt. Do not put passwords in git.
+
+| Variable | Purpose |
+| --- | --- |
+| `AUTH_SECRET` | Signs the session cookie. Required. |
+| `AUTH_SEED_NAME` / `AUTH_SEED_EMAIL` / `AUTH_SEED_ROLE` / `AUTH_SEED_PASSWORD` | Seeds Charlie (or another first administrator). |
+| `AUTH_OPERATORS` | Optional JSON array of extra people for Vercel / production. |
+
+On a machine with a writable disk, **Settings → People / Logins** can add more operators to `data/operators.json` (gitignored). On Vercel, add people with env vars instead.
+
+## Yahoo inbox (IMAP)
 
 ## Yahoo inbox (IMAP)
 
