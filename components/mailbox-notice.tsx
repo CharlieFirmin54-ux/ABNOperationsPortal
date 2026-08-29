@@ -4,7 +4,8 @@ import { useOperations } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export function MailboxNotice({ className }: { className?: string }) {
-  const { source, configured, error, syncing } = useOperations();
+  const { source, configured, error, syncing, jobs, emails } = useOperations();
+  const hasWork = jobs.length > 0 || emails.length > 0;
 
   if (syncing && source === "unconfigured" && !error) {
     return (
@@ -33,6 +34,14 @@ export function MailboxNotice({ className }: { className?: string }) {
     );
   }
 
+  if (error && hasWork) {
+    return (
+      <p className={cn("text-sm text-zinc-500", className)}>
+        Showing the last loaded jobs. Yahoo will refresh in the background.
+      </p>
+    );
+  }
+
   if (error) {
     return (
       <div
@@ -43,10 +52,6 @@ export function MailboxNotice({ className }: { className?: string }) {
       >
         <p className="font-medium text-white">Could not sync the mailbox</p>
         <p className="mt-1 text-zinc-400">{error}</p>
-        <p className="mt-1 text-zinc-500">
-          The portal will not load placeholder jobs. Retry refresh once IMAP is
-          reachable.
-        </p>
       </div>
     );
   }
