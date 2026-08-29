@@ -1,19 +1,38 @@
-import { ImapFlow } from "imapflow";
+import { ImapFlow, type MessageStructureObject } from "imapflow";
 import { simpleParser } from "mailparser";
-import type { InboxEmail } from "@/lib/types";
+import type { EmailAttachment, InboxEmail } from "@/lib/types";
+import {
+  defaultFilename,
+  safeFilename,
+} from "@/lib/email-attachments";
 
 const DEFAULT_HOST = "imap.mail.yahoo.com";
 const DEFAULT_PORT = 993;
 const DEFAULT_LIMIT = 40;
 const FETCH_TIMEOUT_MS = 25_000;
+const ATTACHMENT_TIMEOUT_MS = 45_000;
 const SOURCE_MAX_BYTES = 150_000;
 const BODY_MAX_CHARS = 8_000;
 const PREVIEW_MAX_CHARS = 110;
+const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+
+const SKIP_ATTACHMENT_TYPES = new Set([
+  "application/pkcs7-signature",
+  "application/x-pkcs7-signature",
+  "application/pgp-signature",
+  "application/pkcs7-mime",
+]);
 
 export type YahooImapConfig = {
   host: string;
   port: number;
   user: string;
+};
+
+export type YahooAttachmentPayload = {
+  filename: string;
+  contentType: string;
+  content: Buffer;
 };
 
 type YahooImapAuth = YahooImapConfig & { pass: string };
@@ -44,7 +63,10 @@ export function redactSecret(value: string): string {
   return value.split(pass).join("[redacted]");
 }
 
-export function sanitizeImapError(err: unknown): string {
+export function sanitizeImapError(
+  err: unknown,
+  fallback = "Could not load Yahoo Mail right now. Showing demo emails instead."
+): string {
   const raw = err instanceof Error ? err.message : String(err);
   const message = redactSecret(raw);
   const lower = message.toLowerCase();
@@ -74,7 +96,11 @@ export function sanitizeImapError(err: unknown): string {
     return `Could not reach Yahoo IMAP (${host}:993). Check that IMAP is enabled for the mailbox and this network allows outbound mail.`;
   }
 
-  return "Could not load Yahoo Mail right now. Showing demo emails instead.";
+  if (lower.includes("too large")) {
+    return "That attachment is too large to open in the portal.";
+  }
+
+  return fallback;
 }
 
 function htmlToPlain(html: string): string {
@@ -107,6 +133,136 @@ function localPart(email: string): string {
   return at > 0 ? email.slice(0, at) : email;
 }
 
+function decodeRfc2231(value: string): string {
+  const encoded = /^[^']*''(.+)$/.exec(value);
+  if (!encoded) return value;
+  try {
+    return decodeURIComponent(encoded[1]);
+  } catch {
+    return value;
+  }
+}
+
+function structureFilename(node: MessageStructureObject): string {
+  const disposition = node.dispositionParameters ?? {};
+  const parameters = node.parameters ?? {};
+  const raw =
+    disposition.filename ||
+    disposition["filename*"] ||
+    parameters.name ||
+    parameters["name*"] ||
+    "";
+  return decodeRfc2231(raw).trim();
+}
+
+function isBodyTextPart(node: MessageStructureObject, filename: string): boolean {
+  const type = (node.type || "").toLowerCase();
+  const disposition = (node.disposition || "").toLowerCase();
+  return (
+    (type === "text/plain" || type === "text/html") &&
+    disposition !== "attachment" &&
+    !filename
+  );
+}
+
+function isAttachmentNode(node: MessageStructureObject): boolean {
+  const type = (node.type || "").toLowerCase();
+  if (!type || type.startsWith("multipart/")) return false;
+  if (SKIP_ATTACHMENT_TYPES.has(type)) return false;
+
+  const filename = structureFilename(node);
+  if (isBodyTextPart(node, filename)) return false;
+
+  const disposition = (node.disposition || "").toLowerCase();
+  if (disposition === "attachment" || filename) return true;
+  if (type.startsWith("image/")) return true;
+  if (type.startsWith("audio/") || type.startsWith("video/")) return true;
+  if (type.startsWith("application/")) return true;
+  if (type === "text/csv" || type === "text/calendar") return true;
+  return false;
+}
+
+export function attachmentsFromStructure(
+  node: MessageStructureObject | undefined,
+  collected: EmailAttachment[] = []
+): EmailAttachment[] {
+  if (!node) return collected;
+
+  if (node.childNodes?.length) {
+    for (const child of node.childNodes) {
+      attachmentsFromStructure(child, collected);
+    }
+    return collected;
+  }
+
+  if (!isAttachmentNode(node)) return collected;
+
+  const contentType = (node.type || "application/octet-stream").toLowerCase();
+  const partId = node.part?.trim() || "1";
+  const filename = safeFilename(
+    structureFilename(node) || defaultFilename(contentType, partId)
+  );
+
+  collected.push({
+    partId,
+    filename,
+    contentType,
+    size: typeof node.size === "number" && node.size > 0 ? node.size : 0,
+  });
+  return collected;
+}
+
+async function withYahooInbox<T>(
+  work: (client: ImapFlow) => Promise<T>,
+  timeoutMs = FETCH_TIMEOUT_MS
+): Promise<T> {
+  const auth = getYahooImapAuth();
+  if (!auth) {
+    throw new Error("Yahoo IMAP is not configured.");
+  }
+
+  const client = new ImapFlow({
+    host: auth.host,
+    port: auth.port,
+    secure: true,
+    auth: {
+      user: auth.user,
+      pass: auth.pass,
+    },
+    logger: false,
+    emitLogs: false,
+    logRaw: false,
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: timeoutMs,
+  });
+
+  const timer = setTimeout(() => {
+    client.close();
+  }, timeoutMs);
+
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock("INBOX");
+    try {
+      return await work(client);
+    } finally {
+      lock.release();
+    }
+  } finally {
+    clearTimeout(timer);
+    try {
+      await client.logout();
+    } catch {
+      try {
+        client.close();
+      } catch {
+        // Connection may already be closed after a timeout.
+      }
+    }
+  }
+}
+
 async function mapImapMessage(message: {
   uid: number;
   flags?: Set<string>;
@@ -117,6 +273,7 @@ async function mapImapMessage(message: {
   };
   internalDate?: Date | string;
   source?: Buffer;
+  bodyStructure?: MessageStructureObject;
 }): Promise<InboxEmail> {
   const fromHeader = message.envelope?.from?.[0];
   let fromEmail = fromHeader?.address?.trim() || "unknown@email";
@@ -163,76 +320,76 @@ async function mapImapMessage(message: {
       ? new Date().toISOString()
       : receivedAt,
     read: message.flags?.has("\\Seen") ?? false,
+    attachments: attachmentsFromStructure(message.bodyStructure),
   };
 }
 
 export async function fetchYahooInbox(
   limit = DEFAULT_LIMIT
 ): Promise<InboxEmail[]> {
-  const auth = getYahooImapAuth();
-  if (!auth) {
-    throw new Error("Yahoo IMAP is not configured.");
-  }
+  return withYahooInbox(async (client) => {
+    const mailbox = client.mailbox;
+    const exists = mailbox ? mailbox.exists : 0;
+    if (!mailbox || exists === 0) return [];
 
-  const client = new ImapFlow({
-    host: auth.host,
-    port: auth.port,
-    secure: true,
-    auth: {
-      user: auth.user,
-      pass: auth.pass,
-    },
-    logger: false,
-    emitLogs: false,
-    logRaw: false,
-    connectionTimeout: 15_000,
-    greetingTimeout: 15_000,
-    socketTimeout: 20_000,
+    const start = Math.max(1, exists - Math.max(1, limit) + 1);
+    const emails: InboxEmail[] = [];
+
+    for await (const message of client.fetch(`${start}:${exists}`, {
+      uid: true,
+      envelope: true,
+      flags: true,
+      internalDate: true,
+      bodyStructure: true,
+      source: { maxLength: SOURCE_MAX_BYTES },
+    })) {
+      emails.push(await mapImapMessage(message));
+    }
+
+    emails.sort(
+      (a, b) =>
+        new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
+    );
+    return emails;
   });
+}
 
-  const timer = setTimeout(() => {
-    client.close();
-  }, FETCH_TIMEOUT_MS);
-
-  try {
-    await client.connect();
-    const lock = await client.getMailboxLock("INBOX");
-    try {
-      const mailbox = client.mailbox;
-      const exists = mailbox ? mailbox.exists : 0;
-      if (!mailbox || exists === 0) return [];
-
-      const start = Math.max(1, exists - Math.max(1, limit) + 1);
-      const emails: InboxEmail[] = [];
-
-      for await (const message of client.fetch(`${start}:${exists}`, {
-        uid: true,
-        envelope: true,
-        flags: true,
-        internalDate: true,
-        source: { maxLength: SOURCE_MAX_BYTES },
-      })) {
-        emails.push(await mapImapMessage(message));
-      }
-
-      emails.sort(
-        (a, b) =>
-          new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
-      );
-      return emails;
-    } finally {
-      lock.release();
-    }
-  } finally {
-    clearTimeout(timer);
-    try {
-      await client.logout();
-    } catch {
-      try {
-        client.close();
-      } catch {
-        // Connection may already be closed after a timeout.
-      }
-    }
+async function readableToBuffer(
+  stream: NodeJS.ReadableStream
+): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
+  return Buffer.concat(chunks);
+}
+
+export async function fetchYahooAttachment(
+  uid: number,
+  partId: string
+): Promise<YahooAttachmentPayload> {
+  return withYahooInbox(async (client) => {
+    const downloaded = await client.download(String(uid), partId, {
+      uid: true,
+      maxBytes: MAX_ATTACHMENT_BYTES,
+    });
+
+    if (
+      downloaded.meta.expectedSize > 0 &&
+      downloaded.meta.expectedSize > MAX_ATTACHMENT_BYTES
+    ) {
+      throw new Error("That attachment is too large to open in the portal.");
+    }
+
+    const content = await readableToBuffer(downloaded.content);
+    const contentType = (
+      downloaded.meta.contentType?.split(";")[0].trim() ||
+      "application/octet-stream"
+    ).toLowerCase();
+    const filename = safeFilename(
+      downloaded.meta.filename || defaultFilename(contentType, partId)
+    );
+
+    return { filename, contentType, content };
+  }, ATTACHMENT_TIMEOUT_MS);
 }

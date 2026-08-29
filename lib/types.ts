@@ -42,6 +42,13 @@ export type Property = {
   bedrooms: number;
 };
 
+export type EmailAttachment = {
+  partId: string;
+  filename: string;
+  contentType: string;
+  size: number;
+};
+
 export type InboxEmail = {
   id: string;
   fromName: string;
@@ -52,6 +59,7 @@ export type InboxEmail = {
   receivedAt: string;
   read: boolean;
   jobId?: string;
+  attachments?: EmailAttachment[];
 };
 
 export type InboxSource = "yahoo" | "demo" | "unconfigured";

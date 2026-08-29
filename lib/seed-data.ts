@@ -1,3 +1,4 @@
+import { DEMO_ATTACHMENT_PART_ID } from "@/lib/email-attachments";
 import type {
   InboxEmail,
   Job,
@@ -192,6 +193,14 @@ export const emails: InboxEmail[] = [
     receivedAt: "2026-08-29T08:12:00.000Z",
     read: false,
     jobId: "39206",
+    attachments: [
+      {
+        partId: DEMO_ATTACHMENT_PART_ID,
+        filename: "boiler-no-heat.pdf",
+        contentType: "application/pdf",
+        size: 654,
+      },
+    ],
   },
   {
     id: "mail-39205",

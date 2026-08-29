@@ -135,6 +135,7 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
       receivedAt: now,
       read: false,
       jobId: jobNo,
+      attachments: [],
     };
     const notification: NotificationItem = {
       id: `ntf-${jobNo}`,

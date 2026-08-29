@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { ExternalLink, Loader2, Paperclip, RefreshCw } from "lucide-react";
+import { MessageAttachments } from "@/components/emails/message-attachments";
 import { YahooMailboxLink } from "@/components/emails/yahoo-mailbox-link";
 import { Button } from "@/components/ui/button";
 import { formatDateTime, formatRelative } from "@/lib/format";
@@ -188,8 +189,18 @@ export default function EmailsPage() {
                     <p className="mt-1 truncate text-xs text-zinc-600">
                       {email.preview}
                     </p>
-                    {!email.read && (
-                      <span className="mt-2 inline-block size-1.5 rounded-full bg-[#e11d2e]" />
+                    {(!email.read || (email.attachments?.length ?? 0) > 0) && (
+                      <div className="mt-2 flex items-center gap-2">
+                        {!email.read && (
+                          <span className="inline-block size-1.5 rounded-full bg-[#e11d2e]" />
+                        )}
+                        {(email.attachments?.length ?? 0) > 0 && (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-zinc-600">
+                            <Paperclip className="size-3" />
+                            {email.attachments?.length}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </button>
                 </li>
@@ -216,6 +227,11 @@ export default function EmailsPage() {
               <p className="max-w-2xl whitespace-pre-wrap text-sm leading-6 text-zinc-300">
                 {selected.body}
               </p>
+              <MessageAttachments
+                key={selected.id}
+                messageId={selected.id}
+                attachments={selected.attachments}
+              />
               <div className="flex flex-wrap items-center gap-3">
                 {linkedJob && (
                   <p className="text-sm text-zinc-500">
