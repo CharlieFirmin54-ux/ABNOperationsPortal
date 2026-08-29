@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useOperations } from "@/lib/store";
 import { isOpenJob } from "@/lib/format";
+import { MailboxNotice } from "@/components/mailbox-notice";
 
 export default function PropertiesPage() {
   const { properties, jobs, hydrated } = useOperations();
@@ -28,9 +29,11 @@ export default function PropertiesPage() {
           Properties
         </h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Houses and flats currently on the ABN maintenance contract.
+          Addresses taken from jobsheets in the connected mailbox.
         </p>
       </div>
+
+      <MailboxNotice />
 
       {!hydrated ? (
         <div className="grid gap-4 md:grid-cols-2">
@@ -43,7 +46,8 @@ export default function PropertiesPage() {
         </div>
       ) : rows.length === 0 ? (
         <div className="rounded-xl border border-white/8 bg-[#0c0c0c] px-6 py-16 text-center text-sm text-zinc-500">
-          No properties loaded.
+          No properties yet. Addresses appear here once jobsheets in the mailbox
+          include a parseable address.
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">

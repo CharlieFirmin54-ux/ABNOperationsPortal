@@ -13,38 +13,42 @@ import { yahooComposeUrl } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 
 export default function EmailsPage() {
-  const { emails: demoEmails, jobs, markEmailRead, hydrated } = useOperations();
+  const { jobs, markEmailRead, hydrated, refreshMailbox } = useOperations();
   const [inbox, setInbox] = useState<InboxFetchResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
-  const loadInbox = useCallback(async () => {
+  const loadInbox = useCallback(async (fresh = false) => {
     setLoading(true);
     setFetchError(null);
     try {
-      const response = await fetch("/api/emails", { cache: "no-store" });
+      const response = await fetch(
+        fresh ? "/api/emails?fresh=1" : "/api/emails",
+        { cache: "no-store" }
+      );
       const data = (await response.json()) as InboxFetchResult;
       setInbox(data);
+      if (fresh) void refreshMailbox(false);
     } catch {
-      setFetchError("Could not reach the emails API. Showing demo emails instead.");
+      setFetchError("Could not reach the emails API.");
       setInbox(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [refreshMailbox]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      void loadInbox();
+      void loadInbox(false);
     });
     return () => window.cancelAnimationFrame(frame);
   }, [loadInbox]);
 
   const live = inbox?.source === "yahoo";
   const displayed = useMemo(() => {
-    const list = live ? inbox?.emails ?? [] : demoEmails;
+    const list = inbox?.emails ?? [];
     return [...list]
       .map((email) =>
         readIds.has(email.id) ? { ...email, read: true } : email
@@ -53,7 +57,7 @@ export default function EmailsPage() {
         (a, b) =>
           new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
       );
-  }, [demoEmails, inbox?.emails, live, readIds]);
+  }, [inbox?.emails, readIds]);
 
   const selected =
     displayed.find((email) => email.id === selectedId) ?? displayed[0] ?? null;
@@ -100,7 +104,7 @@ export default function EmailsPage() {
           <Button
             variant="outline"
             className="h-10 rounded-lg border-white/10 bg-[#161616] text-white hover:bg-[#1f1f1f]"
-            onClick={() => void loadInbox()}
+            onClick={() => void loadInbox(true)}
             disabled={loading}
           >
             {loading ? (
@@ -130,8 +134,8 @@ export default function EmailsPage() {
             <code className="text-zinc-300">YAHOO_EMAIL</code> and{" "}
             <code className="text-zinc-300">YAHOO_APP_PASSWORD</code> in{" "}
             <code className="text-zinc-300">.env.local</code> and restart{" "}
-            <code className="text-zinc-300">npm run dev</code>. Demo repair
-            emails are shown below so this page stays usable.
+            <code className="text-zinc-300">npm run dev</code>. Jobs and emails
+            stay empty until the mailbox is connected.
           </p>
         </div>
       )}
@@ -140,9 +144,6 @@ export default function EmailsPage() {
         <div className="rounded-xl border border-[#e11d2e]/30 bg-[#e11d2e]/5 px-4 py-3 text-sm text-zinc-300">
           <p className="font-medium text-white">Could not load Yahoo Mail</p>
           <p className="mt-1 text-zinc-400">{inbox?.error || fetchError}</p>
-          <p className="mt-1 text-zinc-500">
-            Showing demo emails so the inbox stays usable.
-          </p>
         </div>
       )}
 

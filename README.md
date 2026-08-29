@@ -18,16 +18,16 @@ Open [http://localhost:43127](http://localhost:43127).
 - Review P1, open, completed, and total job counts on the dashboard
 - Raise a test job or a full works order
 - Filter and open jobs, change status/priority, and add notes
-- Browse contracted properties and their job history
-- Read repair emails from **Yahoo Mail over IMAP** (or demo seed mail if IMAP is not set up)
+- Browse properties derived from jobsheet addresses
+- Read repair emails from **Yahoo Mail over IMAP**
 - Open a **Yahoo mailbox** in a new tab and reply from Yahoo compose
 - Check a simple workload report
 
-Data is stored in this browser so the portal runs without a database. Use **Settings → Reset demo data** to restore the seed jobs.
+Jobs are parsed from the connected mailbox (jobsheets and repair reports). Local status changes and notes stay in this browser. Use **Settings → Clear local notes and status changes** to drop those edits and re-sync from mail.
 
 ## Yahoo inbox (IMAP)
 
-The Emails page fetches the real Yahoo inbox over IMAP. It does not only link out to Yahoo.
+The Emails page and the jobs list fetch the real Yahoo inbox over IMAP. It does not only link out to Yahoo.
 
 1. In Yahoo **Account Security**, turn on two-step verification.
 2. Generate an **app password**: Account Security → App passwords (or Generate app password) → choose **Mail**. Copy the 16-character password.
@@ -47,7 +47,9 @@ Optional: `YAHOO_IMAP_HOST` defaults to `imap.mail.yahoo.com` (port 993, TLS). U
 npm run dev
 ```
 
-Open [http://localhost:43127/emails](http://localhost:43127/emails) and use **Refresh**. Until those variables are set, the page shows a setup notice and demo repair emails so it is never blank. If IMAP sign-in or the network fails, the error is shown and demo mail is used as a fallback.
+Open [http://localhost:43127](http://localhost:43127) or [http://localhost:43127/emails](http://localhost:43127/emails) and use **Refresh**. Until those variables are set, pages show a connect-mailbox notice and stay empty — demo jobs are not loaded. If IMAP sign-in or the network fails, the error is shown and the portal does not fall back to placeholder data.
+
+Yahoo security/account messages and supplier marketing are skipped. Only maintenance jobsheets and similar repair reports become jobs.
 
 ## Stack
 

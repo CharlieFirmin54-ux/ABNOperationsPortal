@@ -26,17 +26,19 @@ export function CreateJobDialog({
 }) {
   const router = useRouter();
   const { properties, createJob } = useOperations();
-  const [propertyId, setPropertyId] = useState(properties[0]?.id ?? "");
-  const [tenant, setTenant] = useState(properties[0]?.tenant ?? "");
+  const [propertyId, setPropertyId] = useState("");
+  const [tenant, setTenant] = useState("");
   const [priority, setPriority] = useState<Priority>("P1");
   const [category, setCategory] = useState<JobCategory>("Heating");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
 
+  const resolvedPropertyId = propertyId || properties[0]?.id || "";
   const selected = useMemo(
-    () => properties.find((property) => property.id === propertyId),
-    [properties, propertyId]
+    () => properties.find((property) => property.id === resolvedPropertyId),
+    [properties, resolvedPropertyId]
   );
+  const tenantValue = tenant || selected?.tenant || "";
 
   function resetFromProperty(id: string) {
     const property = properties.find((item) => item.id === id);
@@ -45,7 +47,7 @@ export function CreateJobDialog({
   }
 
   function handleSubmit() {
-    if (!propertyId) {
+    if (!resolvedPropertyId) {
       setError("Choose a property.");
       return;
     }
@@ -54,8 +56,8 @@ export function CreateJobDialog({
       return;
     }
     const job = createJob({
-      tenant,
-      propertyId,
+      tenant: tenantValue,
+      propertyId: resolvedPropertyId,
       priority,
       category,
       description,
@@ -80,22 +82,33 @@ export function CreateJobDialog({
             <Label htmlFor="property">Property</Label>
             <select
               id="property"
-              value={propertyId}
+              value={resolvedPropertyId}
               onChange={(event) => resetFromProperty(event.target.value)}
               className="h-9 rounded-lg border border-white/10 bg-[#0c0c0c] px-3 text-sm text-white"
+              disabled={properties.length === 0}
             >
-              {properties.map((property) => (
-                <option key={property.id} value={property.id}>
-                  {property.address} · {property.organisation}
-                </option>
-              ))}
+              {properties.length === 0 ? (
+                <option value="">No mailbox properties yet</option>
+              ) : (
+                properties.map((property) => (
+                  <option key={property.id} value={property.id}>
+                    {property.address} · {property.organisation}
+                  </option>
+                ))
+              )}
             </select>
+            {properties.length === 0 && (
+              <p className="text-xs text-zinc-500">
+                Properties are created from jobsheet addresses in the Yahoo
+                inbox. Sync the mailbox before raising a works order.
+              </p>
+            )}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="tenant">Tenant</Label>
             <Input
               id="tenant"
-              value={tenant}
+              value={tenantValue}
               onChange={(event) => setTenant(event.target.value)}
               className="h-9 border-white/10 bg-[#0c0c0c]"
             />
@@ -158,6 +171,7 @@ export function CreateJobDialog({
           <Button
             className="bg-[#e11d2e] text-white hover:bg-[#c41626]"
             onClick={handleSubmit}
+            disabled={properties.length === 0}
           >
             Create job
           </Button>

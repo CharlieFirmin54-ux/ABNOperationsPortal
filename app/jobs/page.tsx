@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { CreateJobDialog } from "@/components/jobs/create-job-dialog";
 import { JobsTable } from "@/components/jobs/jobs-table";
+import { MailboxNotice } from "@/components/mailbox-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { jobMatchesQuery, STATUSES, useOperations } from "@/lib/store";
@@ -13,7 +14,7 @@ import { cn } from "@/lib/utils";
 const PRIORITY_FILTERS: Array<Priority | "All"> = ["All", "P1", "P2", "P3", "P4"];
 
 export default function JobsPage() {
-  const { jobs, hydrated } = useOperations();
+  const { jobs, hydrated, source } = useOperations();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [priority, setPriority] = useState<Priority | "All">("All");
@@ -35,7 +36,7 @@ export default function JobsPage() {
             Jobs
           </h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Works orders across the ABN portfolio.
+            Works orders parsed from the connected mailbox.
           </p>
         </div>
         <Button
@@ -46,6 +47,8 @@ export default function JobsPage() {
           New Job
         </Button>
       </div>
+
+      <MailboxNotice />
 
       <div className="flex flex-col gap-3 rounded-xl border border-white/8 bg-[#0c0c0c] p-4">
         <Input
@@ -87,7 +90,11 @@ export default function JobsPage() {
         ) : (
           <JobsTable
             jobs={filtered}
-            emptyMessage="No jobs match those filters. Clear the search or raise a new job."
+            emptyMessage={
+              source === "yahoo"
+                ? "No jobs match those filters. Clear the search or raise a new job."
+                : "No jobs yet. Connect the Yahoo mailbox to import jobsheets."
+            }
           />
         )}
       </section>

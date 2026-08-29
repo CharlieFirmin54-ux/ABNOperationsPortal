@@ -3,14 +3,15 @@
 import { useMemo, useState } from "react";
 import { Box, Circle, Loader2, RefreshCw } from "lucide-react";
 import { JobsTable } from "@/components/jobs/jobs-table";
+import { MailboxNotice } from "@/components/mailbox-notice";
 import { Button } from "@/components/ui/button";
 import { isOpenJob } from "@/lib/format";
 import { useOperations } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
-  const { jobs, createTestJob, hydrated } = useOperations();
-  const [refreshing, setRefreshing] = useState(false);
+  const { jobs, createTestJob, hydrated, syncing, refreshMailbox, source } =
+    useOperations();
   const [flashId, setFlashId] = useState<string | null>(null);
 
   const stats = useMemo(() => {
@@ -31,9 +32,8 @@ export default function DashboardPage() {
     [jobs]
   );
 
-  function handleRefresh() {
-    setRefreshing(true);
-    window.setTimeout(() => setRefreshing(false), 500);
+  async function handleRefresh() {
+    await refreshMailbox(true);
   }
 
   function handleTestJob() {
@@ -50,16 +50,17 @@ export default function DashboardPage() {
             ABN Property Maintenance Dashboard
           </h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Live overview of maintenance jobs
+            Live overview of maintenance jobs from the Yahoo inbox
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             className="h-10 rounded-lg border-white/10 bg-[#161616] text-white hover:bg-[#1f1f1f]"
-            onClick={handleRefresh}
+            onClick={() => void handleRefresh()}
+            disabled={syncing}
           >
-            {refreshing ? (
+            {syncing ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <RefreshCw className="size-4" />
@@ -75,7 +76,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {!hydrated ? (
+      <MailboxNotice />
+
+      {!hydrated || (syncing && jobs.length === 0) ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <div
@@ -131,7 +134,11 @@ export default function DashboardPage() {
         </div>
         <JobsTable
           jobs={recent}
-          emptyMessage="No jobs in the system yet. Create a test job to get started."
+          emptyMessage={
+            source === "yahoo"
+              ? "No maintenance jobs were found in the latest mailbox sync."
+              : "No jobs yet. Connect the Yahoo mailbox, then refresh."
+          }
         />
       </section>
     </div>

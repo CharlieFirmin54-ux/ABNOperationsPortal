@@ -9,25 +9,22 @@ import {
   useState,
 } from "react";
 import { nextJobNumber } from "@/lib/format";
-import {
-  emails as seedEmails,
-  jobs as seedJobs,
-  notes as seedNotes,
-  notifications as seedNotifications,
-  properties as seedProperties,
-} from "@/lib/seed-data";
 import type {
   InboxEmail,
+  InboxSource,
   Job,
   JobCategory,
   JobNote,
   JobStatus,
+  JobsFetchResult,
   NotificationItem,
   Priority,
   Property,
 } from "@/lib/types";
 
-const STORAGE_KEY = "abn-ops-store-v1";
+const STORAGE_KEY = "abn-ops-store-v2";
+
+type JobPatch = Partial<Pick<Job, "status" | "priority">>;
 
 type StoreState = {
   jobs: Job[];
@@ -35,6 +32,13 @@ type StoreState = {
   emails: InboxEmail[];
   notes: JobNote[];
   notifications: NotificationItem[];
+  jobPatches: Record<string, JobPatch>;
+};
+
+type MailboxMeta = {
+  source: InboxSource;
+  configured: boolean;
+  error: string | null;
 };
 
 type CreateJobInput = {
@@ -47,30 +51,130 @@ type CreateJobInput = {
   description: string;
 };
 
-type OperationsStore = StoreState & {
-  hydrated: boolean;
-  createJob: (input: CreateJobInput) => Job;
-  createTestJob: () => Job;
-  updateJob: (id: string, patch: Partial<Pick<Job, "status" | "priority">>) => void;
-  addNote: (jobId: string, body: string) => void;
-  markEmailRead: (id: string) => void;
-  markNotificationsRead: () => void;
-  resetDemo: () => void;
-};
+type OperationsStore = StoreState &
+  MailboxMeta & {
+    hydrated: boolean;
+    syncing: boolean;
+    refreshMailbox: (fresh?: boolean) => Promise<void>;
+    createJob: (input: CreateJobInput) => Job;
+    createTestJob: () => Job;
+    updateJob: (id: string, patch: JobPatch) => void;
+    addNote: (jobId: string, body: string) => void;
+    markEmailRead: (id: string) => void;
+    markNotificationsRead: () => void;
+    resetDemo: () => void;
+  };
 
-const seedState = (): StoreState => ({
-  jobs: seedJobs,
-  properties: seedProperties,
-  emails: seedEmails,
-  notes: seedNotes,
-  notifications: seedNotifications,
+const emptyState = (): StoreState => ({
+  jobs: [],
+  properties: [],
+  emails: [],
+  notes: [],
+  notifications: [],
+  jobPatches: {},
 });
+
+function propertiesFromJobs(jobs: Job[], extras: Property[] = []): Property[] {
+  const map = new Map<string, Property>();
+  for (const property of extras) {
+    map.set(property.id, property);
+  }
+  for (const job of jobs) {
+    if (!job.propertyId || job.address === "Address not stated") continue;
+    const current = map.get(job.propertyId);
+    if (current) {
+      map.set(job.propertyId, {
+        ...current,
+        tenant: current.tenant || job.tenant,
+        organisation: current.organisation || job.organisation,
+      });
+      continue;
+    }
+    const postcodeMatch = job.address.match(
+      /\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i
+    );
+    map.set(job.propertyId, {
+      id: job.propertyId,
+      name: job.address.split(",")[0]?.trim() || job.address,
+      address: job.address,
+      postcode: postcodeMatch ? postcodeMatch[1].toUpperCase() : "",
+      organisation: job.organisation,
+      tenant: job.tenant === "Not recorded" ? "" : job.tenant,
+      type: "House",
+      bedrooms: 0,
+    });
+  }
+  return [...map.values()].sort((a, b) => a.address.localeCompare(b.address));
+}
+
+function applyPatches(jobs: Job[], patches: Record<string, JobPatch>): Job[] {
+  return jobs.map((job) => {
+    const patch = patches[job.id];
+    return patch ? { ...job, ...patch } : job;
+  });
+}
+
+function mergeMailbox(
+  current: StoreState,
+  incoming: JobsFetchResult
+): StoreState {
+  if (incoming.source !== "yahoo") {
+    return current;
+  }
+
+  const incomingJobs = applyPatches(
+    incoming.jobs.map((job) => ({ ...job, origin: "mailbox" as const })),
+    current.jobPatches
+  );
+  const incomingIds = new Set(incomingJobs.map((job) => job.id));
+  const previousMailbox = current.jobs.filter(
+    (job) => job.origin !== "local" && !incomingIds.has(job.id)
+  );
+  const localJobs = current.jobs.filter((job) => job.origin === "local");
+  const jobs = applyPatches(
+    [...incomingJobs, ...previousMailbox, ...localJobs],
+    current.jobPatches
+  ).sort(
+    (a, b) =>
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
+
+  const emailMap = new Map<string, InboxEmail>();
+  for (const email of current.emails) emailMap.set(email.id, email);
+  for (const email of incoming.emails) emailMap.set(email.id, email);
+
+  const readState = new Map(
+    current.notifications.map((item) => [item.id, item.read])
+  );
+  const notifications = (incoming.notifications ?? []).map((item) => ({
+    ...item,
+    read: readState.get(item.id) ?? item.read,
+  }));
+
+  return {
+    ...current,
+    jobs,
+    properties: propertiesFromJobs(jobs, incoming.properties),
+    emails: [...emailMap.values()].sort(
+      (a, b) =>
+        new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
+    ),
+    notifications:
+      notifications.length > 0 ? notifications : current.notifications,
+  };
+}
 
 const OperationsContext = createContext<OperationsStore | null>(null);
 
 export function OperationsProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<StoreState>(seedState);
+  const [state, setState] = useState<StoreState>(emptyState);
   const [hydrated, setHydrated] = useState(false);
+  const [syncing, setSyncing] = useState(true);
+  const [mailbox, setMailbox] = useState<MailboxMeta>({
+    source: "unconfigured",
+    configured: false,
+    error: null,
+  });
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -79,15 +183,16 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
         if (raw) {
           const parsed = JSON.parse(raw) as Partial<StoreState>;
           setState({
-            jobs: parsed.jobs ?? seedJobs,
-            properties: parsed.properties ?? seedProperties,
-            emails: parsed.emails ?? seedEmails,
-            notes: parsed.notes ?? seedNotes,
-            notifications: parsed.notifications ?? seedNotifications,
+            jobs: parsed.jobs ?? [],
+            properties: parsed.properties ?? [],
+            emails: parsed.emails ?? [],
+            notes: parsed.notes ?? [],
+            notifications: parsed.notifications ?? [],
+            jobPatches: parsed.jobPatches ?? {},
           });
         }
       } catch {
-        setState(seedState());
+        setState(emptyState());
       } finally {
         setHydrated(true);
       }
@@ -100,47 +205,69 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [hydrated, state]);
 
+  const refreshMailbox = useCallback(async (fresh = false) => {
+    setSyncing(true);
+    try {
+      const response = await fetch(
+        fresh ? "/api/jobs?fresh=1" : "/api/jobs",
+        { cache: "no-store" }
+      );
+      const data = (await response.json()) as JobsFetchResult;
+      setMailbox({
+        source: data.source,
+        configured: data.configured,
+        error: data.error,
+      });
+      setState((current) => mergeMailbox(current, data));
+    } catch {
+      setMailbox({
+        source: "error",
+        configured: true,
+        error: "Could not reach the jobs API.",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const frame = window.requestAnimationFrame(() => {
+      void refreshMailbox(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [hydrated, refreshMailbox]);
+
   const persistJob = useCallback((input: CreateJobInput, asTest = false) => {
     const property =
       state.properties.find((item) => item.id === input.propertyId) ??
       state.properties[0];
-    if (!property) {
-      throw new Error("No properties available to raise a job against.");
-    }
-    const jobNo = nextJobNumber(state.jobs);
     const now = new Date().toISOString();
+    const jobNo = nextJobNumber(state.jobs);
+    const address = property?.address || "Unassigned";
+    const organisation = property?.organisation || "ABN Property Maintenance";
+    const propertyId = property?.id || "prop-unassigned";
     const created: Job = {
       id: jobNo,
       jobNo,
-      tenant: input.tenant.trim() || property.tenant,
-      tenantPhone: input.tenantPhone?.trim() || "07700 900000",
-      tenantEmail: input.tenantEmail?.trim() || "tenant@email.com",
-      address: property.address,
-      organisation: property.organisation,
+      tenant: input.tenant.trim() || property?.tenant || "Test tenant",
+      tenantPhone: input.tenantPhone?.trim() || "",
+      tenantEmail: input.tenantEmail?.trim() || "",
+      address,
+      organisation,
       priority: input.priority,
       status: "New",
       category: input.category,
       description: input.description.trim(),
-      propertyId: property.id,
+      propertyId,
       createdAt: now,
       updatedAt: now,
-    };
-    const email: InboxEmail = {
-      id: `mail-${jobNo}`,
-      fromName: property.organisation,
-      fromEmail: `repairs@${property.organisation.toLowerCase().replace(/\s+/g, "")}.co.uk`,
-      subject: `${input.priority} — ${asTest ? "Test job" : input.category} at ${property.address}`,
-      preview: input.description.slice(0, 110),
-      body: input.description,
-      receivedAt: now,
-      read: false,
-      jobId: jobNo,
-      attachments: [],
+      origin: "local",
     };
     const notification: NotificationItem = {
       id: `ntf-${jobNo}`,
       title: asTest ? "Test job created" : "New job raised",
-      body: `Job ${jobNo} opened for ${property.address}.`,
+      body: `Job ${jobNo} opened for ${address}.`,
       createdAt: now,
       read: false,
       href: `/jobs/${jobNo}`,
@@ -148,7 +275,7 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
     setState((current) => ({
       ...current,
       jobs: [created, ...current.jobs],
-      emails: [email, ...current.emails],
+      properties: propertiesFromJobs([created, ...current.jobs], current.properties),
       notifications: [notification, ...current.notifications],
     }));
     return created;
@@ -160,34 +287,34 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
   );
 
   const createTestJob = useCallback(() => {
+    const property = state.properties[0];
     return persistJob(
       {
-        tenant: "Esteban Coronado",
-        tenantPhone: "07700 900216",
-        tenantEmail: "esteban.coronado@email.com",
-        propertyId: "prop-sycamore",
+        tenant: property?.tenant || "Test tenant",
+        propertyId: property?.id || "prop-unassigned",
         priority: "P1",
-        category: "Heating",
+        category: "General",
         description:
-          "Test job created from the operations dashboard. Boiler lockout reported — confirm heating and hot water on arrival.",
+          "Test job created from the operations dashboard. Confirm the fault and access on arrival.",
       },
       true
     );
-  }, [persistJob]);
+  }, [persistJob, state.properties]);
 
-  const updateJob = useCallback(
-    (id: string, patch: Partial<Pick<Job, "status" | "priority">>) => {
-      setState((current) => ({
-        ...current,
-        jobs: current.jobs.map((job) =>
-          job.id === id
-            ? { ...job, ...patch, updatedAt: new Date().toISOString() }
-            : job
-        ),
-      }));
-    },
-    []
-  );
+  const updateJob = useCallback((id: string, patch: JobPatch) => {
+    setState((current) => ({
+      ...current,
+      jobPatches: {
+        ...current.jobPatches,
+        [id]: { ...current.jobPatches[id], ...patch },
+      },
+      jobs: current.jobs.map((job) =>
+        job.id === id
+          ? { ...job, ...patch, updatedAt: new Date().toISOString() }
+          : job
+      ),
+    }));
+  }, []);
 
   const addNote = useCallback((jobId: string, body: string) => {
     const trimmed = body.trim();
@@ -228,13 +355,17 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
 
   const resetDemo = useCallback(() => {
     window.localStorage.removeItem(STORAGE_KEY);
-    setState(seedState());
-  }, []);
+    setState(emptyState());
+    void refreshMailbox(true);
+  }, [refreshMailbox]);
 
   const value = useMemo<OperationsStore>(
     () => ({
       ...state,
+      ...mailbox,
       hydrated,
+      syncing,
+      refreshMailbox,
       createJob,
       createTestJob,
       updateJob,
@@ -248,10 +379,13 @@ export function OperationsProvider({ children }: { children: React.ReactNode }) 
       createJob,
       createTestJob,
       hydrated,
+      mailbox,
       markEmailRead,
       markNotificationsRead,
+      refreshMailbox,
       resetDemo,
       state,
+      syncing,
       updateJob,
     ]
   );

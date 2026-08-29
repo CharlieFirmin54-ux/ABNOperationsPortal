@@ -15,7 +15,7 @@ export default function SettingsPage() {
           Settings
         </h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Operator profile and demo data for the ABN operations portal.
+          Operator profile and mailbox sync for the ABN operations portal.
         </p>
       </div>
 
@@ -32,13 +32,14 @@ export default function SettingsPage() {
       <section className="rounded-xl border border-white/8 bg-[#0c0c0c] p-5">
         <h3 className="text-sm font-medium text-white">Yahoo mailbox</h3>
         <p className="mt-2 max-w-2xl text-sm text-zinc-500">
-          The Emails page loads the Yahoo inbox over IMAP when{" "}
-          <code className="text-zinc-400">YAHOO_EMAIL</code> and{" "}
+          The Emails page and the jobs list load from the Yahoo inbox over IMAP
+          when <code className="text-zinc-400">YAHOO_EMAIL</code> and{" "}
           <code className="text-zinc-400">YAHOO_APP_PASSWORD</code> are set in{" "}
           <code className="text-zinc-400">.env.local</code> (Yahoo app password,
-          not the account password). Until then it shows demo repair emails.
-          You can still open Yahoo Mail in a new tab; replies launch Yahoo
-          compose.
+          not the account password). Jobsheets and repair reports become jobs;
+          Yahoo security mail and supplier marketing are skipped. Until the
+          mailbox is connected, jobs and emails stay empty. You can still open
+          Yahoo Mail in a new tab; replies launch Yahoo compose.
         </p>
         <div className="mt-4">
           <YahooMailboxLink />
@@ -48,9 +49,9 @@ export default function SettingsPage() {
       <section className="rounded-xl border border-white/8 bg-[#0c0c0c] p-5">
         <h3 className="text-sm font-medium text-white">Local workspace</h3>
         <p className="mt-2 max-w-2xl text-sm text-zinc-500">
-          Jobs, emails and notes are stored in this browser so the portal works
-          without a database. Connect Supabase later if you want the same
-          records shared across devices.
+          Jobs are parsed from the connected Yahoo inbox. Status changes and
+          notes stay in this browser. Connect Supabase later if you want the
+          same records shared across devices.
         </p>
         <dl className="mt-4 grid gap-4 sm:grid-cols-3">
           <Item label="Jobs on file" value={String(jobs.length)} />
@@ -62,7 +63,7 @@ export default function SettingsPage() {
           className="mt-5 border-white/10 bg-transparent text-white hover:bg-white/5"
           onClick={resetDemo}
         >
-          Reset demo data
+          Clear local notes and status changes
         </Button>
       </section>
     </div>

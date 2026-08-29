@@ -14,6 +14,8 @@ export type JobCategory =
   | "Carpentry"
   | "General";
 
+export type JobOrigin = "mailbox" | "local";
+
 export type Job = {
   id: string;
   jobNo: string;
@@ -29,6 +31,7 @@ export type Job = {
   propertyId: string;
   createdAt: string;
   updatedAt: string;
+  origin?: JobOrigin;
 };
 
 export type Property = {
@@ -62,15 +65,7 @@ export type InboxEmail = {
   attachments?: EmailAttachment[];
 };
 
-export type InboxSource = "yahoo" | "demo" | "unconfigured";
-
-export type InboxFetchResult = {
-  source: InboxSource;
-  configured: boolean;
-  mailbox: string | null;
-  error: string | null;
-  emails: InboxEmail[];
-};
+export type InboxSource = "yahoo" | "demo" | "unconfigured" | "error";
 
 export type JobNote = {
   id: string;
@@ -87,4 +82,23 @@ export type NotificationItem = {
   createdAt: string;
   read: boolean;
   href?: string;
+};
+
+export type InboxFetchResult = {
+  source: InboxSource;
+  configured: boolean;
+  mailbox: string | null;
+  error: string | null;
+  emails: InboxEmail[];
+};
+
+export type JobsFetchResult = {
+  source: InboxSource;
+  configured: boolean;
+  mailbox: string | null;
+  error: string | null;
+  jobs: Job[];
+  properties: Property[];
+  emails: InboxEmail[];
+  notifications: NotificationItem[];
 };

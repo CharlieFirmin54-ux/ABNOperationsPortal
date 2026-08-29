@@ -66,7 +66,7 @@ export function redactSecret(value: string): string {
 
 export function sanitizeImapError(
   err: unknown,
-  fallback = "Could not load Yahoo Mail right now. Showing demo emails instead."
+  fallback = "Could not load Yahoo Mail right now."
 ): string {
   const raw = err instanceof Error ? err.message : String(err);
   const message = redactSecret(raw);
@@ -325,9 +325,11 @@ async function mapImapMessage(message: {
   };
 }
 
-export async function fetchYahooInbox(
-  limit = DEFAULT_LIMIT
-): Promise<InboxEmail[]> {
+let inboxCache: { at: number; emails: InboxEmail[] } | null = null;
+let inboxInflight: Promise<InboxEmail[]> | null = null;
+const INBOX_CACHE_MS = 20_000;
+
+async function fetchYahooInboxUncached(limit: number): Promise<InboxEmail[]> {
   return withYahooInbox(async (client) => {
     const mailbox = client.mailbox;
     const exists = mailbox ? mailbox.exists : 0;
@@ -353,6 +355,31 @@ export async function fetchYahooInbox(
     );
     return emails;
   });
+}
+
+export async function fetchYahooInbox(
+  limit = DEFAULT_LIMIT,
+  options?: { fresh?: boolean }
+): Promise<InboxEmail[]> {
+  if (
+    !options?.fresh &&
+    inboxCache &&
+    Date.now() - inboxCache.at < INBOX_CACHE_MS
+  ) {
+    return inboxCache.emails;
+  }
+  if (inboxInflight) return inboxInflight;
+
+  inboxInflight = fetchYahooInboxUncached(limit)
+    .then((emails) => {
+      inboxCache = { at: Date.now(), emails };
+      return emails;
+    })
+    .finally(() => {
+      inboxInflight = null;
+    });
+
+  return inboxInflight;
 }
 
 export class YahooAttachmentNotFoundError extends Error {

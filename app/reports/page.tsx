@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { isOpenJob } from "@/lib/format";
 import { STATUSES, useOperations } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { MailboxNotice } from "@/components/mailbox-notice";
 
 export default function ReportsPage() {
   const { jobs, properties, hydrated } = useOperations();
@@ -39,9 +40,11 @@ export default function ReportsPage() {
           Reports
         </h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Workload snapshot for the ABN Maintenance contract.
+          Workload snapshot from mailbox-synced jobs.
         </p>
       </div>
+
+      <MailboxNotice />
 
       {!hydrated ? (
         <div className="h-72 animate-pulse rounded-xl border border-white/8 bg-[#0c0c0c]" />

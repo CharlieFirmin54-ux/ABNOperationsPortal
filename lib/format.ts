@@ -64,6 +64,6 @@ export function nextJobNumber(jobs: Job[]) {
   const max = jobs.reduce((highest, job) => {
     const n = Number.parseInt(job.jobNo, 10);
     return Number.isFinite(n) ? Math.max(highest, n) : highest;
-  }, 39200);
+  }, 39999);
   return String(max + 1);
 }
