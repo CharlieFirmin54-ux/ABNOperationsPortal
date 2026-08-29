@@ -13,8 +13,8 @@ npm run dev
 
 Open [http://localhost:43127](http://localhost:43127). Everyone on the team uses the same login:
 
-- **Username:** `abn`
-- **Password:** `ABN-Operations-29`
+- **Username:** `ABN2026`
+- **Password:** `BeckRowABN!`
 
 Change that pair with `AUTH_USERNAME` and `AUTH_PASSWORD` in `.env.local` or on Vercel if you need to.
 
@@ -42,7 +42,7 @@ YAHOO_EMAIL
 YAHOO_APP_PASSWORD
 ```
 
-Login does not need extra AUTH keys. The team username and password are built in (`abn` / `ABN-Operations-29`). Optional overrides: `AUTH_USERNAME`, `AUTH_PASSWORD`, `AUTH_SECRET`.
+Login does not need extra AUTH keys. The team username and password are built in (`ABN2026` / `BeckRowABN!`). Optional overrides: `AUTH_USERNAME`, `AUTH_PASSWORD`, `AUTH_SECRET`.
 
 Optional: `YAHOO_IMAP_HOST` (default `imap.mail.yahoo.com`), `YAHOO_IMAP_PORT` (default `993`). Copy mailbox values from local `.env.local`. Preview deployments need the same vars if you want the live mailbox there too.
 
@@ -91,8 +91,8 @@ Jobs are parsed from the connected mailbox (jobsheets and repair reports). Local
 
 The portal uses a signed httpOnly session cookie. Everyone shares one username and password:
 
-- Username: `abn`
-- Password: `ABN-Operations-29`
+- Username: `ABN2026`
+- Password: `BeckRowABN!`
 
 | Variable | Purpose |
 | --- | --- |
