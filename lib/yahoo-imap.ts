@@ -1,3 +1,4 @@
+import { lookup } from "node:dns/promises";
 import { ImapFlow, type MessageStructureObject } from "imapflow";
 import { simpleParser } from "mailparser";
 import type { EmailAttachment, InboxEmail } from "@/lib/types";
@@ -47,7 +48,7 @@ export function getYahooImapConfig(): YahooImapConfig | null {
 
 function getYahooImapAuth(): YahooImapAuth | null {
   const user = process.env.YAHOO_EMAIL?.trim();
-  const pass = process.env.YAHOO_APP_PASSWORD?.trim();
+  const pass = process.env.YAHOO_APP_PASSWORD?.replace(/\s+/g, "") ?? "";
   if (!user || !pass) return null;
   const portRaw = process.env.YAHOO_IMAP_PORT?.trim();
   const port = portRaw ? Number(portRaw) : DEFAULT_PORT;
@@ -60,25 +61,58 @@ function getYahooImapAuth(): YahooImapAuth | null {
 }
 
 export function redactSecret(value: string): string {
-  const pass = process.env.YAHOO_APP_PASSWORD?.trim();
-  if (!pass) return value;
-  return value.split(pass).join("[redacted]");
+  const pass = process.env.YAHOO_APP_PASSWORD?.replace(/\s+/g, "") ?? "";
+  const spaced = process.env.YAHOO_APP_PASSWORD?.trim() ?? "";
+  let next = value;
+  if (pass) next = next.split(pass).join("[redacted]");
+  if (spaced && spaced !== pass) next = next.split(spaced).join("[redacted]");
+  return next;
+}
+
+function imapErrorText(err: unknown): string {
+  if (!err) return "";
+  if (typeof err === "string") return err;
+  if (err instanceof Error) {
+    const extra = err as Error & {
+      code?: string;
+      responseText?: string;
+      serverResponseCode?: string;
+      authenticationFailed?: boolean;
+      response?: string;
+    };
+    return [
+      extra.message,
+      extra.code,
+      extra.responseText,
+      extra.serverResponseCode,
+      extra.response,
+      extra.authenticationFailed ? "authenticationFailed" : "",
+    ]
+      .filter((part) => typeof part === "string" && part.trim())
+      .join(" ");
+  }
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
 }
 
 export function sanitizeImapError(
   err: unknown,
   fallback = "Could not load Yahoo Mail right now."
 ): string {
-  const raw = err instanceof Error ? err.message : String(err);
-  const message = redactSecret(raw);
+  const message = redactSecret(imapErrorText(err));
   const lower = message.toLowerCase();
 
   if (
     lower.includes("auth") ||
     lower.includes("invalid login") ||
-    lower.includes("authenticationfailed") ||
     lower.includes("invalid credentials") ||
-    lower.includes("login failed")
+    lower.includes("login failed") ||
+    lower.includes("login denied") ||
+    lower.includes("application-specific password") ||
+    lower.includes("app password")
   ) {
     return "Yahoo IMAP sign-in failed. Confirm YAHOO_EMAIL is the full mailbox address and YAHOO_APP_PASSWORD is a Yahoo app password, not the account password.";
   }
@@ -86,15 +120,19 @@ export function sanitizeImapError(
   if (
     lower.includes("timeout") ||
     lower.includes("timed out") ||
+    lower.includes("etimeout") ||
     lower.includes("enotfound") ||
     lower.includes("econnrefused") ||
     lower.includes("econnreset") ||
+    lower.includes("enetunreach") ||
+    lower.includes("ehostunreach") ||
     lower.includes("eai_again") ||
     lower.includes("certificate") ||
     lower.includes("socket") ||
     lower.includes("closed") ||
     lower.includes("aborted") ||
     lower.includes("destroyed") ||
+    lower.includes("noconnection") ||
     lower.includes("not available") ||
     lower.includes("function_invocation")
   ) {
@@ -106,7 +144,8 @@ export function sanitizeImapError(
     return "That attachment is too large to open in the portal.";
   }
 
-  return fallback;
+  const detail = message.replace(/\s+/g, " ").trim().slice(0, 180);
+  return detail ? `${fallback} ${detail}` : fallback;
 }
 
 function htmlToPlain(html: string): string {
@@ -218,6 +257,19 @@ export function attachmentsFromStructure(
   return collected;
 }
 
+async function resolveImapHost(hostname: string): Promise<{
+  host: string;
+  servername: string;
+}> {
+  try {
+    const { address } = await lookup(hostname, { family: 4 });
+    if (address) return { host: address, servername: hostname };
+  } catch {
+    // Fall back to the hostname if IPv4 lookup fails.
+  }
+  return { host: hostname, servername: hostname };
+}
+
 async function withYahooInbox<T>(
   work: (client: ImapFlow) => Promise<T>,
   timeoutMs = FETCH_TIMEOUT_MS
@@ -227,13 +279,22 @@ async function withYahooInbox<T>(
     throw new Error("Yahoo IMAP is not configured.");
   }
 
+  const resolved = await resolveImapHost(auth.host);
   const client = new ImapFlow({
-    host: auth.host,
+    host: resolved.host,
+    servername: resolved.servername,
     port: auth.port,
     secure: true,
+    disableAutoIdle: true,
+    disableCompression: true,
     auth: {
       user: auth.user,
       pass: auth.pass,
+      loginMethod: "LOGIN",
+    },
+    tls: {
+      servername: resolved.servername,
+      minVersion: "TLSv1.2",
     },
     logger: false,
     emitLogs: false,
@@ -241,6 +302,11 @@ async function withYahooInbox<T>(
     connectionTimeout: CONNECT_TIMEOUT_MS,
     greetingTimeout: CONNECT_TIMEOUT_MS,
     socketTimeout: timeoutMs,
+  });
+
+  let socketError: Error | null = null;
+  client.on("error", (err) => {
+    socketError = err instanceof Error ? err : new Error(String(err));
   });
 
   const timer = setTimeout(() => {
@@ -255,6 +321,8 @@ async function withYahooInbox<T>(
     } finally {
       lock.release();
     }
+  } catch (error) {
+    throw socketError ?? error;
   } finally {
     clearTimeout(timer);
     try {
@@ -343,6 +411,7 @@ async function fetchYahooInboxUncached(limit: number): Promise<InboxEmail[]> {
       if (!mailbox || exists === 0) return;
 
       const start = Math.max(1, exists - Math.max(1, limit) + 1);
+      const includeSource = !process.env.VERCEL;
 
       for await (const message of client.fetch(`${start}:${exists}`, {
         uid: true,
@@ -350,7 +419,7 @@ async function fetchYahooInboxUncached(limit: number): Promise<InboxEmail[]> {
         flags: true,
         internalDate: true,
         bodyStructure: true,
-        source: { maxLength: SOURCE_MAX_BYTES },
+        ...(includeSource ? { source: { maxLength: SOURCE_MAX_BYTES } } : {}),
       })) {
         emails.push(await mapImapMessage(message));
       }
