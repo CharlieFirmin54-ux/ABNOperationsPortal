@@ -18,10 +18,8 @@ export async function GET() {
       operators,
       canManage: session.operator.role === "Administrator",
     });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Could not load people.";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Could not load people." }, { status: 500 });
   }
 }
 
@@ -58,9 +56,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: result.error }, { status: result.status });
     }
     return NextResponse.json({ operator: result.operator }, { status: 201 });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Could not add that login.";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Could not add that login." }, { status: 500 });
   }
 }

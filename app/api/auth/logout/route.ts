@@ -9,5 +9,8 @@ export async function POST() {
   const store = await cookies();
   store.set(SESSION_COOKIE, "", { ...sessionCookieOptions(), maxAge: 0 });
   store.delete(SESSION_COOKIE);
-  return NextResponse.json({ ok: true });
+  return NextResponse.json(
+    { ok: true },
+    { headers: { "Cache-Control": "private, no-store" } }
+  );
 }

@@ -145,8 +145,7 @@ export function sanitizeImapError(
     return "That attachment is too large to open in the portal.";
   }
 
-  const detail = message.replace(/\s+/g, " ").trim().slice(0, 180);
-  return detail ? `${fallback} ${detail}` : fallback;
+  return fallback;
 }
 
 function htmlToPlain(html: string): string {

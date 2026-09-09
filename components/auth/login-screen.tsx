@@ -11,7 +11,8 @@ import { safeInternalPath } from "@/lib/auth/paths";
 
 type MeResponse = {
   operator: { id: string } | null;
-  suggestedUsername?: string;
+  configured?: boolean;
+  configError?: string | null;
 };
 
 export function LoginScreen() {
@@ -49,7 +50,7 @@ function LoginForm() {
   const from = safeInternalPath(searchParams.get("from"));
   const signedOut = searchParams.get("reason") === "signed-out";
 
-  const [username, setUsername] = useState("ABN2026");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [info, setInfo] = useState(
@@ -68,8 +69,8 @@ function LoginForm() {
           router.replace(from);
           return;
         }
-        if (data.suggestedUsername) {
-          setUsername(data.suggestedUsername);
+        if (data.configError) {
+          setError(data.configError);
         }
         setReady(true);
       })
@@ -143,7 +144,7 @@ function LoginForm() {
                   autoComplete="username"
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
-                  placeholder="ABN2026"
+                  placeholder="Username"
                   className="h-10 rounded-xl border-white/10 bg-[#161616] text-white placeholder:text-zinc-600"
                   disabled={submitting}
                   required

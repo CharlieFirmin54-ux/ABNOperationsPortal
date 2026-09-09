@@ -372,8 +372,8 @@ export async function createFileOperator(input: {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { error: "Add a valid email address.", status: 400 };
   }
-  if (input.password.length < 8) {
-    return { error: "Use a password of at least 8 characters.", status: 400 };
+  if (input.password.length < 12) {
+    return { error: "Use a password of at least 12 characters.", status: 400 };
   }
   const existing = await listStoredOperators();
   if (existing.some((operator) => operator.email === email)) {

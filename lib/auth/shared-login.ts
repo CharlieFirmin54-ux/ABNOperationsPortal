@@ -1,9 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import type { PublicOperator } from "@/lib/auth/types";
 
-export const DEFAULT_TEAM_USERNAME = "ABN2026";
-export const DEFAULT_TEAM_PASSWORD = "BeckRowABN!";
-
 function safeEqual(left: string, right: string): boolean {
   const a = Buffer.from(left);
   const b = Buffer.from(right);
@@ -12,15 +9,20 @@ function safeEqual(left: string, right: string): boolean {
 }
 
 export function getTeamUsername(): string {
-  return process.env.AUTH_USERNAME?.trim() || DEFAULT_TEAM_USERNAME;
+  return process.env.AUTH_USERNAME?.trim() || "";
 }
 
 export function getTeamPassword(): string {
-  return process.env.AUTH_PASSWORD?.trim() || DEFAULT_TEAM_PASSWORD;
+  return process.env.AUTH_PASSWORD?.trim() || "";
 }
 
-export function getTeamOperator(): PublicOperator {
+export function isSharedLoginConfigured(): boolean {
+  return Boolean(getTeamUsername() && getTeamPassword());
+}
+
+export function getTeamOperator(): PublicOperator | null {
   const username = getTeamUsername();
+  if (!username) return null;
   return {
     id: `shared:${username.toLowerCase()}`,
     name: "ABN team",
@@ -36,7 +38,7 @@ export function authenticateSharedLogin(
   const expectedUser = getTeamUsername().toLowerCase();
   const expectedPass = getTeamPassword();
   const givenUser = username.trim().toLowerCase();
-  if (!givenUser || !password) return null;
+  if (!expectedUser || !expectedPass || !givenUser || !password) return null;
   const userOk = safeEqual(givenUser, expectedUser);
   const passOk = safeEqual(password, expectedPass);
   if (!userOk || !passOk) return null;

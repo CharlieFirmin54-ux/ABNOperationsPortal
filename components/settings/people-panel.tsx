@@ -249,7 +249,7 @@ export function PeoplePanel() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="h-10 rounded-xl border-white/10 bg-[#161616] text-white"
-              minLength={8}
+              minLength={12}
               required
             />
           </div>
